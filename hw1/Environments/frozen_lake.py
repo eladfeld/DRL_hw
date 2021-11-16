@@ -1,4 +1,4 @@
-from hw1.environment_interface import EnvironmentInterface
+from environment_interface import EnvironmentInterface
 import gym
 
 
@@ -13,6 +13,7 @@ class Environment(EnvironmentInterface):
     def initialize_state(self):
         self.gym_env.reset()
         self.current_state = 0
+        self.done = False
 
     def get_state(self):
         if self.current_state is None:

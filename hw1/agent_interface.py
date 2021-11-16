@@ -1,4 +1,4 @@
-from hw1.environment_interface import EnvironmentInterface
+from environment_interface import EnvironmentInterface
 from abc import ABC, abstractmethod
 
 
@@ -19,12 +19,8 @@ class AgentInterface(ABC):
         raise NotImplementedError('initialize_q dose not implemented by agent: %s' % self.name)
 
     @abstractmethod
-    def get_q(self, state):
-        raise NotImplementedError('get_q dose not implemented by agent: %s' % self.name)
-
-    @abstractmethod
-    def get_action(self, q_s):
-        raise NotImplementedError('get_action dose not implemented by agent: %s' % self.name)
+    def get_action_by_policy(self, state):
+        raise NotImplementedError('get_action_by_policy dose not implemented by agent: %s' % self.name)
 
     @abstractmethod
     def update_q(self, state, action, new_q):
@@ -33,3 +29,7 @@ class AgentInterface(ABC):
     @abstractmethod
     def get_all_actions(self):
         raise NotImplementedError('get_all_actions dose not implemented by agent: %s' % self.name)
+
+    @abstractmethod
+    def get_action_by_max(self, state):
+        raise NotImplementedError('get_action_by_max dose not implemented by agent: %s' % self.name)

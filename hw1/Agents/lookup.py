@@ -1,4 +1,4 @@
-from hw1.agent_interface import AgentInterface
+from agent_interface import AgentInterface
 import numpy as np
 class Agent(AgentInterface):
     def __init__(self, environment, argse_dict):
@@ -35,14 +35,13 @@ class Agent(AgentInterface):
         self.q_lookup_table = np.zeros(shape=[len(self.states), len(self.actions)])
         self.step = 0
 
-    def get_q(self, state):
-        return self.q_lookup_table[self.states_indices[str(state)], :]
-
-    def get_action(self, q_s):
-        if not self.train_mode or np.random.uniform(0, 1) > 1 - self.epsilon:
-            return self.actions[np.argmax(q_s)]
+    def get_action_by_policy(self, state):
+        q_for_state = self.q_lookup_table[self.states_indices[str(state)], :]
+        if not self.train_mode or np.random.uniform(0, 1) < 1 - self.epsilon:
+            action_index = np.argmax(q_for_state)
         else:
-            return self.actions[np.random.randint(len(self.actions))]
+            action_index = np.random.randint(len(self.actions))
+        return self.actions[action_index], q_for_state[action_index]
 
     def update_q(self, state, action, new_q):
         self.q_lookup_table[self.states_indices[str(state)], self.actions_indices[str(action)]] = new_q
@@ -52,6 +51,12 @@ class Agent(AgentInterface):
     def _update_epsilon(self):
         if self.step % self.epsilon_decay_steps == 0:
             self.epsilon = self.epsilon * self.epsilon_decay_factor
+            print('decay')
 
     def get_all_actions(self):
         return self.actions
+
+    def get_action_by_max(self, state):
+        q_for_state = self.q_lookup_table[self.states_indices[str(state)], :]
+        action_index = np.argmax(q_for_state)
+        return self.actions[action_index], q_for_state[action_index]
