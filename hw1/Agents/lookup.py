@@ -38,7 +38,8 @@ class Agent(AgentInterface):
     def get_action_by_policy(self, state):
         q_for_state = self.q_lookup_table[self.states_indices[str(state)], :]
         if not self.train_mode or np.random.uniform(0, 1) < 1 - self.epsilon:
-            action_index = np.argmax(q_for_state)
+            best_actions_indices = np.where(q_for_state == np.max(q_for_state))[0]
+            action_index = best_actions_indices[np.random.randint(len(best_actions_indices))]
         else:
             action_index = np.random.randint(len(self.actions))
         return self.actions[action_index], q_for_state[action_index]
@@ -51,7 +52,6 @@ class Agent(AgentInterface):
     def _update_epsilon(self):
         if self.step % self.epsilon_decay_steps == 0:
             self.epsilon = self.epsilon * self.epsilon_decay_factor
-            print('decay')
 
     def get_all_actions(self):
         return self.actions

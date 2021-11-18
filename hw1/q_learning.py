@@ -5,6 +5,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from matplotlib import pyplot as plt
+import numpy as np
 def parse_args():
     parser = argparse.ArgumentParser(description='q-learning arguments')
     parser.add_argument('-e', dest='environment', type=str, required=True,
@@ -17,13 +18,13 @@ def parse_args():
                         help='optional, epsilon decay factor value for epsilon greedy policy, legal range [0, 1].')
     parser.add_argument('--epsilon_decay_steps', dest='epsilon_decay_steps', type=int,
                         help='optional, epsilon decay factor value for epsilon greedy policy, legal range [0, 1].')
-    parser.add_argument('--episodes', dest='episodes', type=int, default= 5000,
+    parser.add_argument('--episodes', dest='episodes', type=int, default=5000,
                         help='optional, max episodes for q_learning')
     parser.add_argument('--steps', dest='steps', type=int, default=100,
                         help='optional, max steps to run with q_learning per episode')
-    parser.add_argument('--discount_factor', dest='discount_factor', type=float, default=1,
+    parser.add_argument('--discount_factor', dest='discount_factor', type=float, default=0.95,
                             help = 'optional, discount factor for q learning algorithm')
-    parser.add_argument('--learning_rate', dest='learning_rate', type=float, default=0.2,
+    parser.add_argument('--learning_rate', dest='learning_rate', type=float, default=0.1,
                          help='optional,learning rate')
     return parser.parse_args()
 def main():
@@ -44,7 +45,7 @@ def main():
     for episode in range(args['episodes']):
         step = 0
         if environment.current_state == 15:
-            g +=1
+            g += 1
             g_counts.append(1)
         else:
             g_counts.append(0)
@@ -69,7 +70,9 @@ def main():
     print(agent.q_lookup_table)
     print((g / args['episodes']) * 100)
     plt.figure()
-    # plt.plot(range(len(steps_to_finish)), steps_to_finish)
+    # avg_steps = [np.mean(steps_to_finish[i * 200: ( i+ 1) * 200]) for i in range(len(steps_to_finish)// 200)]
+    plt.plot(range(len(steps_to_finish)), steps_to_finish)
+    # plt.plot(range(len(avg_steps)), avg_steps)
     plt.plot(range(len(g_counts)), g_counts)
     plt.xlabel('episode')
     plt.ylabel('steps')

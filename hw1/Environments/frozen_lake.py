@@ -33,10 +33,12 @@ class Environment(EnvironmentInterface):
         new_state, reward, done, _ = self.gym_env.step(action)
         self.current_state = new_state
         self.done = done
+        if done and new_state != 15:
+            reward = -4
         return reward
 
     def render(self):
-        self.render()
+        self.gym_env.render()
 
     def is_done(self):
         return self.done
