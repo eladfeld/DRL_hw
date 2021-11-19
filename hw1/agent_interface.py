@@ -1,4 +1,4 @@
-from environment_interface import EnvironmentInterface
+from hw1.environment_interface import EnvironmentInterface
 from abc import ABC, abstractmethod
 
 

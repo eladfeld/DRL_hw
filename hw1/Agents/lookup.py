@@ -1,4 +1,4 @@
-from agent_interface import AgentInterface
+from hw1.agent_interface import AgentInterface
 import numpy as np
 class Agent(AgentInterface):
     def __init__(self, environment, argse_dict):
