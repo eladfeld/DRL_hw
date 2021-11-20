@@ -26,7 +26,7 @@ class Visualization(VisualizationInterface):
         if self.episode in self.steps_to_cache_q:
             self.q_cache.append(self.agent.q_lookup_table)
 
-    def plot_heatmap(self, Q, episode):
+    def _plot_heatmap(self, Q, episode):
         """
         :reference: https://matplotlib.org/stable/gallery/images_contours_and_fields/image_annotated_heatmap.html
         :param Q: q lookup table of the agent
@@ -49,11 +49,13 @@ class Visualization(VisualizationInterface):
                 text = ax.text(j, i, round(Q.item(i, j), 1),
                                ha="center", va="center", color="w")
 
-        ax.set_title(f"Q lookup table at episode {episode + 1}")
+        ax.set_title(f"Q lookup table at episode {episode}")
         fig.tight_layout()
         plt.show()
 
     def show(self):
+        for i in range(len(self.q_cache)):
+            self._plot_heatmap(self.q_cache[i], self.steps_to_cache_q[i])
         avg_steps = 100
         steps_avgs = [np.mean(self.steps[i * avg_steps: (i + 1) * avg_steps]) for i in range(self.episode // avg_steps)]
         rewards_avgs = [np.mean(self.rewards[i * avg_steps: (i + 1) * avg_steps]) for i in
