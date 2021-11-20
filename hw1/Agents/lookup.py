@@ -1,5 +1,7 @@
 from hw1.agent_interface import AgentInterface
 import numpy as np
+
+
 class Agent(AgentInterface):
     def __init__(self, environment, argse_dict):
         super().__init__(environment, 'lookup')

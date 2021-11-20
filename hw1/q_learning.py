@@ -28,8 +28,12 @@ def parse_args():
     parser.add_argument('--learning_rate', dest='learning_rate', type=float, default=0.1,
                          help='optional,learning rate')
     return parser.parse_args()
+
+
+
 def main():
     args = vars(parse_args())
+    episodes_to_plot = [499, 1999, 4999]
     agents_args = {arg: args[arg] for arg in agent_args_names if args[arg] is not None}
     agent_class = getattr(import_module('hw1.Agents.' + args['agent']), 'Agent')
     environment_class = getattr(import_module('hw1.Environments.' + args['environment']), 'Environment')
@@ -62,7 +66,8 @@ def main():
             agent.update_q(state, action, new_q)
         if do_visualization:
             visualization.update(steps=steps, rewards=rewards)
-
+            if episode in episodes_to_plot:
+                visualization.plot_heatmap(agent.q_lookup_table, episode)
     if do_visualization:
         visualization.show()
     print('done')
