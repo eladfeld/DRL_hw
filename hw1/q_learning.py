@@ -60,27 +60,23 @@ def deep_q_learning(args):
     agent.initialize_q()
     experience_replay = []
     for episode in range(args['episodes']):
-        rewards = []
+        episode_rewards = []
         steps = 0
         environment.initialize_state()
         while not environment.is_done() and steps < args['steps']:
             state = environment.get_state()
-            action, q = agent.get_action_by_policy(state)
+            action, _ = agent.get_action_by_policy(state)
             reward = environment.step(action)
-            rewards.append(reward)
+            episode_rewards.append(reward)
+            d = environment.is_done()
             steps += 1
-            if environment.is_done():
-                y = reward
-            else:
-                new_state = environment.get_state()
-                _, q_next = agent.get_action_by_max(new_state)
-                y = reward + args['discount_factor'] * q_next
-            cache_to_experience_replay(args, experience_replay, state, action, y)
-            actions, states, ys = get_batch(args, experience_replay)
-            agent.update_q(states=states, actions=actions, y=ys)
-        print(episode)
+            new_state = environment.get_state()
+            cache_to_experience_replay(args, experience_replay, reward, state, action, new_state, d)
+            states, actions, rewards, new_states, ds = get_batch(args, experience_replay)
+            agent.update_q(states=states, actions=actions, rewards=rewards, new_states=new_states, ds=ds)
+        print("episode: %d, steps: %d" % (episode, steps))
         if run_experiment:
-            experiment.update(steps=steps, rewards=rewards)
+            experiment.update(steps=steps, rewards=episode_rewards)
             if experiment.is_done():
                 break
     if run_experiment:
@@ -92,12 +88,12 @@ def get_batch(args, experience_replay):
     batch_size = min(args['batch_size'], len(experience_replay))
     indices = np.random.choice(len(experience_replay), batch_size)
     experience_replay_batch = [experience_replay[i] for i in indices]
-    states, actions, ys = map(list, zip(*experience_replay_batch))
-    return actions, np.asarray(states), np.asarray(ys)
+    states, actions, rewards, new_states, ds = map(list, zip(*experience_replay_batch))
+    return actions, states, rewards, new_states, ds
 
 
-def cache_to_experience_replay(args, experience_replay, state, action, y):
-    experience_replay.append((state, action, y))
+def cache_to_experience_replay(args, experience_replay, state, action, rewards, new_state, d):
+    experience_replay.append((state, action, rewards, new_state, d))
     if len(experience_replay) > args['experience_replay_capacity']:
         experience_replay.pop(0)
 

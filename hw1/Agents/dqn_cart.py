@@ -22,11 +22,12 @@ class Agent(AgentInterface):
         self.training_model = None
         self.target_update_steps = self.args['target_update_steps']
         self.step = 0
+        self.discount_factor = self.args['discount_factor']
 
 
     def _read_arguments(self, args_dict):
         possible_args = ['epsilon', 'epsilon_decay_factor', 'epsilon_decay_steps', 'layers', 'learning_rate',
-                         'target_update_steps', 'steps']
+                         'target_update_steps', 'steps', 'discount_factor']
         args = {}
         for key in args_dict.keys():
             if key in possible_args:
@@ -63,13 +64,22 @@ class Agent(AgentInterface):
         return self.actions[action_index], np.squeeze(q_for_state)[action_index]
 
     def update_q(self, **kwars):
-        states, actions, y = kwars['states'], kwars['actions'], kwars['y']
+        states, actions, rewards, new_states, ds = kwars['states'], kwars['actions'], kwars['rewards'],\
+                                                   kwars['new_states'], kwars['ds']
+        ds = np.asarray(ds)
         actions = np.asarray([self.actions_indices[a] for a in actions], dtype=np.int32)
-        if len(states.shape) == 1:
-            states = np.expand_dims(states, axis=0)
-            actions = np.expand_dims(actions, axis=0)
-            y = np.expand_dims(y, axis=0)
-        loss = self.training_model.train_on_batch(x=[states, actions], y=y)
+        rewards = np.asarray(rewards,dtype=np.float64)
+        new_states = np.asarray(new_states)
+        done_indices = np.where(ds)
+        undone_indices = np.where(ds == False)
+        ys = np.zeros_like(actions, dtype=np.float64)
+        ys[done_indices] += rewards[done_indices]
+        q_next = self.get_action_by_max(new_states[undone_indices])
+        ys[undone_indices] += rewards[undone_indices] + self.discount_factor * q_next
+
+        ys = np.asarray(ys)
+        states = np.asarray(states)
+        loss = self.training_model.train_on_batch(x=[states, actions], y=ys)
         if self.step % 100 == 0:
             print('loss: %1.4f' % loss)
         self.step += 1
@@ -89,9 +99,8 @@ class Agent(AgentInterface):
         return self.actions
 
     def get_action_by_max(self, state):
-        q_for_state = self.target_q_network.predict(np.expand_dims(state, axis=0))
-        action_index = np.argmax(q_for_state)
-        return self.actions[action_index], np.squeeze(q_for_state)[action_index]
+        q_for_state = self.target_q_network.predict(state)
+        return np.max(q_for_state,axis=-1)
 
     def _build_model(self):
         i = Input(shape=self.states_shape)
