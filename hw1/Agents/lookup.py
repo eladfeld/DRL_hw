@@ -3,11 +3,9 @@ import numpy as np
 
 
 class Agent(AgentInterface):
-    def __init__(self, environment, argse_dict):
+    def __init__(self, environment, args_dict):
         super().__init__(environment, 'lookup')
-        self.greedy = True
-        self.args = {'epsilon': 0, 'epsilon_decay_factor': 1, 'epsilon_decay_steps': 1}
-        self._read_arguments(argse_dict)
+        self.args = self._read_arguments(args_dict)
         self.epsilon = self.args['epsilon']
         self.epsilon_decay_factor = self.args['epsilon_decay_factor']
         self.epsilon_decay_steps = self.args['epsilon_decay_steps']
@@ -19,11 +17,13 @@ class Agent(AgentInterface):
         self.q_lookup_table = np.zeros(shape=[len(self.states), len(self.actions)])
         self.step = 0
 
-    def _read_arguments(self, argse_dict):
-        for key in argse_dict.keys():
-            if key not in self.args:
-                raise ValueError('illegal argument %s' % key)
-            self.args[key] = argse_dict[key]
+    def _read_arguments(self, args_dict):
+        possible_args = ['epsilon', 'epsilon_decay_factor', 'epsilon_decay_steps']
+        args = {}
+        for key in args_dict.keys():
+            if key in possible_args:
+                args[key] = args_dict[key]
+        return args
 
     def _check_epsilon_greedy_parameters(self):
         if self.epsilon < 0 or self.epsilon >= 1:
@@ -46,7 +46,8 @@ class Agent(AgentInterface):
             action_index = np.random.randint(len(self.actions))
         return self.actions[action_index], q_for_state[action_index]
 
-    def update_q(self, state, action, new_q):
+    def update_q(self, **kwargs):
+        state, action, new_q = kwargs['state'], kwargs['action'], kwargs['new_q']
         self.q_lookup_table[self.states_indices[str(state)], self.actions_indices[str(action)]] = new_q
         self.step += 1
         self._update_epsilon()

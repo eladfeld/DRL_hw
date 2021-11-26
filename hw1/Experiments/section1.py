@@ -1,9 +1,9 @@
-from hw1.visualization_interface import VisualizationInterface
+from hw1.experiment_interface import ExperimentInterface
 from matplotlib import pyplot as plt
 import numpy as np
 
 
-class Visualization(VisualizationInterface):
+class Experiment(ExperimentInterface):
     def __init__(self, environment, agent, args_dict):
         super().__init__(environment, agent, args_dict, name='section1')
         self.environment = environment
@@ -77,3 +77,6 @@ class Visualization(VisualizationInterface):
         ax[1].set_title('avg steps for episode')
         ax[1].legend(['average steps over %s episodes' % avg_steps])
         plt.show()
+
+    def is_done(self):
+        return False

@@ -3,7 +3,7 @@ from hw1.agent_interface import AgentInterface
 from abc import ABC, abstractmethod
 
 
-class VisualizationInterface(ABC):
+class ExperimentInterface(ABC):
     def __init__(self, environment, agent, args_dict, name='interface'):
         if not isinstance(environment, EnvironmentInterface):
             raise ValueError('environment argument should be instance of EnvironmentInterface')
@@ -16,8 +16,12 @@ class VisualizationInterface(ABC):
 
     @abstractmethod
     def update(self, **kwargs):
-        raise NotImplementedError('update dose not implemented by Visualizations: %s' % self.name)
+        raise NotImplementedError('update dose not implemented by Experiments: %s' % self.name)
 
     @abstractmethod
     def show(self):
-        raise NotImplementedError('show dose not implemented by Visualizations: %s' % self.name)
+        raise NotImplementedError('show dose not implemented by Experiments: %s' % self.name)
+
+    @abstractmethod
+    def is_done(self):
+        raise NotImplementedError('is_done dose not implemented by Experiments: %s' % self.name)
