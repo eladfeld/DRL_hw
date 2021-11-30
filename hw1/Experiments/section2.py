@@ -18,14 +18,14 @@ class Experiment(ExperimentInterface):
 
 
     def show(self):
-        avg_steps = 100
+        avg_steps = 20
         rewards_avgs = [np.mean(self.rewards[i * avg_steps: (i + 1) * avg_steps]) for i in
                         range(self.episode // avg_steps)]
 
         fig = plt.figure()
         fig.set_size_inches(16, 8)
         plt.plot(np.linspace(1, self.episode + 1, self.episode), self.rewards)
-        plt.plot(np.linspace(avg_steps, (len(rewards_avgs) + 1) * 100, len(rewards_avgs)), rewards_avgs, color='red',
+        plt.plot(np.linspace(avg_steps, (len(rewards_avgs) + 1) * avg_steps, len(rewards_avgs)), rewards_avgs, color='red',
                    linewidth=4)
         plt.ylabel('reward')
         plt.title('reward for episode')

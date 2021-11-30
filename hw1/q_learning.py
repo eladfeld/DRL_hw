@@ -27,13 +27,13 @@ def parse_args():
                             help = 'optional, discount factor for q learning algorithm')
     parser.add_argument('--learning_rate', dest='learning_rate', type=float, default=0.1,
                          help='optional,learning rate')
-    parser.add_argument('--batch_size', dest='batch_size', type=int, default=512,
+    parser.add_argument('--batch_size', dest='batch_size', type=int, default=64,
                         help='optional, batch size for dqn training')
-    parser.add_argument('--layers', dest='layers', type=int, nargs='+', default=[128, 32, 4],
+    parser.add_argument('--layers', dest='layers', type=int, nargs='+', default=[32, 16, 8],
                         help='optional, hidden layers for dqn network')
-    parser.add_argument('--target_update_steps', dest='target_update_steps', type=int, default=100,
+    parser.add_argument('--target_update_steps', dest='target_update_steps', type=int, default=400,
                         help='optional, steps to update dqn target network')
-    parser.add_argument('--experience_replay_capacity', dest='experience_replay_capacity', type=int, default=10000,
+    parser.add_argument('--experience_replay_capacity', dest='experience_replay_capacity', type=int, default=5000,
                         help='optional, steps to update dqn target network')
 
     return parser.parse_args()
@@ -71,7 +71,7 @@ def deep_q_learning(args):
             d = environment.is_done()
             steps += 1
             new_state = environment.get_state()
-            cache_to_experience_replay(args, experience_replay, reward, state, action, new_state, d)
+            cache_to_experience_replay(args, experience_replay, state, action, reward, new_state, d)
             states, actions, rewards, new_states, ds = get_batch(args, experience_replay)
             agent.update_q(states=states, actions=actions, rewards=rewards, new_states=new_states, ds=ds)
         print("episode: %d, steps: %d" % (episode, steps))
@@ -89,11 +89,11 @@ def get_batch(args, experience_replay):
     indices = np.random.choice(len(experience_replay), batch_size)
     experience_replay_batch = [experience_replay[i] for i in indices]
     states, actions, rewards, new_states, ds = map(list, zip(*experience_replay_batch))
-    return actions, states, rewards, new_states, ds
+    return states, actions, rewards, new_states, ds
 
 
-def cache_to_experience_replay(args, experience_replay, state, action, rewards, new_state, d):
-    experience_replay.append((state, action, rewards, new_state, d))
+def cache_to_experience_replay(args, experience_replay, state, action, reward, new_state, d):
+    experience_replay.append((state, action, reward, new_state, d))
     if len(experience_replay) > args['experience_replay_capacity']:
         experience_replay.pop(0)
 

@@ -1,10 +1,11 @@
 from hw1.agent_interface import AgentInterface
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.layers import Dense, Input, BatchNormalization
 from tensorflow.keras.models import clone_model, Model
-from tensorflow.keras.optimizers import Adam
-
+from tensorflow.keras.optimizers import Adam, RMSprop
+from tensorflow.keras import  backend as K
+min_epsilon = 0.
 
 class Agent(AgentInterface):
     def __init__(self, environment, args_dict):
@@ -35,7 +36,7 @@ class Agent(AgentInterface):
         return args
 
     def _check_arguments(self):
-        if self.epsilon < 0 or self.epsilon >= 1:
+        if self.epsilon < 0 or self.epsilon > 1:
             raise ValueError('epsilon value should be between 0 to 1')
         if self.epsilon_decay_factor < 0 or self.epsilon_decay_factor > 1:
             raise ValueError('epsilon_decay_factor value should be between 0 to 1')
@@ -56,9 +57,8 @@ class Agent(AgentInterface):
 
     def get_action_by_policy(self, state):
         q_for_state = self.value_q_network.predict(np.expand_dims(state, axis=0))
-        if not self.train_mode or np.random.uniform(0, 1) < 1 - self.epsilon:
-            best_actions_indices = np.where(q_for_state == np.max(q_for_state))[0]
-            action_index = best_actions_indices[np.random.randint(len(best_actions_indices))]
+        if not self.train_mode or np.random.uniform(0, 1) > self.epsilon:
+            action_index = np.argmax(q_for_state)
         else:
             action_index = np.random.randint(len(self.actions))
         return self.actions[action_index], np.squeeze(q_for_state)[action_index]
@@ -68,22 +68,22 @@ class Agent(AgentInterface):
                                                    kwars['new_states'], kwars['ds']
         ds = np.asarray(ds)
         actions = np.asarray([self.actions_indices[a] for a in actions], dtype=np.int32)
-        rewards = np.asarray(rewards,dtype=np.float64)
+        rewards = np.asarray(rewards, dtype=np.float64)
         new_states = np.asarray(new_states)
+        states = np.asarray(states)
         done_indices = np.where(ds)
         undone_indices = np.where(ds == False)
         ys = np.zeros_like(actions, dtype=np.float64)
         ys[done_indices] += rewards[done_indices]
         q_next = self.get_action_by_max(new_states[undone_indices])
         ys[undone_indices] += rewards[undone_indices] + self.discount_factor * q_next
-
-        ys = np.asarray(ys)
-        states = np.asarray(states)
+        ys = ys
+        actions = np.concatenate([np.indices(actions.shape).T, np.expand_dims(actions, axis=0).T], axis=1)
         loss = self.training_model.train_on_batch(x=[states, actions], y=ys)
         if self.step % 100 == 0:
             print('loss: %1.4f' % loss)
         self.step += 1
-        if self.step % self.target_update_steps == 0 or self.step < 1000:
+        if self.step % self.target_update_steps == 0 or self.step < 50:
             self._update_target()
         if self.step % self.epsilon_decay_steps == 0:
             self._update_epsilon()
@@ -92,15 +92,18 @@ class Agent(AgentInterface):
         self.target_q_network.set_weights(self.value_q_network.get_weights())
 
     def _update_epsilon(self):
-        print('decay')
-        self.epsilon = self.epsilon * self.epsilon_decay_factor
+        if self.epsilon > min_epsilon:
+            self.epsilon = self.epsilon * self.epsilon_decay_factor
+        if self.epsilon < min_epsilon:
+            self.epsilon = min_epsilon
+        print('epsilon: %1.3f' % self.epsilon)
 
     def get_all_actions(self):
         return self.actions
 
     def get_action_by_max(self, state):
         q_for_state = self.target_q_network.predict(state)
-        return np.max(q_for_state,axis=-1)
+        return np.max(q_for_state, axis=-1)
 
     def _build_model(self):
         i = Input(shape=self.states_shape)
@@ -108,14 +111,21 @@ class Agent(AgentInterface):
         d = i
         for layer in layers:
             d = Dense(layer, activation='relu')(d)
-        o = Dense(len(self.actions), activation='relu')(d)
+            d = BatchNormalization()(d)
+        o = Dense(len(self.actions), activation='linear')(d)
 
         return Model(inputs=i, outputs=o)
 
     def _build_training_model(self):
         i = Input(shape=self.states_shape)
-        a = Input(shape=(1,), dtype='int32')
+        a = Input(shape=(2,), dtype='int32')
         o = self.value_q_network(i)
-        o = tf.gather(o, a, axis=1) ## check if its right
+        o = tf.gather_nd(o, a) ## check if its right
         return Model(inputs=[i, a], outputs=[o])
 
+
+def agent_mse(y_true, y_pred):
+    epsilon = 1e-5
+    mse = K.mean(K.square((y_true - y_pred)))
+    mean_q = K.sqrt(K.mean(y_pred) + epsilon)
+    return mse - mean_q * 0.1
