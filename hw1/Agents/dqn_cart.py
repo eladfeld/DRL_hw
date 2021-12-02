@@ -4,8 +4,9 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, Input, BatchNormalization
 from tensorflow.keras.models import clone_model, Model
 from tensorflow.keras.optimizers import Adam, RMSprop
-from tensorflow.keras import  backend as K
-min_epsilon = 0.
+from tensorflow.keras import backend as K
+min_epsilon = 0.001
+min_lr = 1e-8
 
 class Agent(AgentInterface):
     def __init__(self, environment, args_dict):
@@ -17,6 +18,7 @@ class Agent(AgentInterface):
         self._check_arguments()
         self.states_shape = environment.get_all_states()
         self.actions = environment.get_all_actions()
+        self.environment = environment
         self.actions_indices = {self.actions[i]: i for i in range(len(self.actions))}
         self.value_q_network = None
         self.target_q_network = None
@@ -24,6 +26,7 @@ class Agent(AgentInterface):
         self.target_update_steps = self.args['target_update_steps']
         self.step = 0
         self.discount_factor = self.args['discount_factor']
+        self.learning_rate = self.args['learning_rate']
 
 
     def _read_arguments(self, args_dict):
@@ -51,7 +54,7 @@ class Agent(AgentInterface):
         self.target_q_network = clone_model(self.value_q_network)
         self.target_q_network.set_weights(self.value_q_network.get_weights())
         self.training_model = self._build_training_model()
-        optimizer = Adam(learning_rate=self.args['learning_rate'])
+        optimizer = Adam(learning_rate=self.learning_rate)
         self.training_model.compile(optimizer, loss='mse')
 
 
@@ -79,6 +82,9 @@ class Agent(AgentInterface):
         ys[undone_indices] += rewards[undone_indices] + self.discount_factor * q_next
         ys = ys
         actions = np.concatenate([np.indices(actions.shape).T, np.expand_dims(actions, axis=0).T], axis=1)
+        if self.environment.step_num == 400 and self.learning_rate > min_lr:
+            self.learning_rate = 0.4 * self.learning_rate
+            K.set_value(self.training_model.optimizer.learning_rate, self.learning_rate)
         loss = self.training_model.train_on_batch(x=[states, actions], y=ys)
         if self.step % 100 == 0:
             print('loss: %1.4f' % loss)

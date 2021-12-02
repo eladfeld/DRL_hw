@@ -36,7 +36,6 @@ class Environment(EnvironmentInterface):
         if not self.is_valid_action(action):
             raise ValueError('action: %s is not valid in %s environment' % (action, self.name))
         new_state, reward, done, _ = self.gym_env.step(action)
-        # new_state = np.append(new_state, (self.max_steps - self.step_num) / self.max_steps)
         self.current_state = new_state
         self.done = done
         return reward

@@ -29,11 +29,11 @@ def parse_args():
                          help='optional,learning rate')
     parser.add_argument('--batch_size', dest='batch_size', type=int, default=256,
                         help='optional, batch size for dqn training')
-    parser.add_argument('--layers', dest='layers', type=int, nargs='+', default=[32, 16, 8],
+    parser.add_argument('--layers', dest='layers', type=int, nargs='+', default=[64, 32, 16],
                         help='optional, hidden layers for dqn network')
     parser.add_argument('--target_update_steps', dest='target_update_steps', type=int, default=200,
                         help='optional, steps to update dqn target network')
-    parser.add_argument('--experience_replay_capacity', dest='experience_replay_capacity', type=int, default=5000,
+    parser.add_argument('--experience_replay_capacity', dest='experience_replay_capacity', type=int, default=20000,
                         help='optional, steps to update dqn target network')
 
     return parser.parse_args()
