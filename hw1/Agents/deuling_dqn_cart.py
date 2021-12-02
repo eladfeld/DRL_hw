@@ -1,9 +1,9 @@
 from hw1.agent_interface import AgentInterface
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Input, BatchNormalization
+from tensorflow.keras.layers import Dense, Input, BatchNormalization, GlobalAvgPool1D, Add , Subtract, Reshape
 from tensorflow.keras.models import clone_model, Model
-from tensorflow.keras.optimizers import Adam, RMSprop
+from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import backend as K
 
 
@@ -121,7 +121,16 @@ class Agent(AgentInterface):
         d = i
         for layer in layers:
             d = Dense(layer, activation='relu')(d)
-        o = Dense(len(self.actions), activation='linear')(d)
+            d = BatchNormalization()(d)
+        a = Dense(4, activation='relu')(d)
+        a = Dense(len(self.actions), activation='linear')(a)
+        a = Reshape(target_shape=(1, a.shape[-1]))(a)
+        a_mean = GlobalAvgPool1D()(a)
+        a = Subtract()([a, a_mean])
+        a = Reshape(target_shape=(a.shape[-1],))(a)
+        v = Dense(4, activation='relu')(d)
+        v = Dense(1, activation='linear')(v)
+        o = Add()([a, v])
 
         return Model(inputs=i, outputs=o)
 
@@ -131,5 +140,4 @@ class Agent(AgentInterface):
         o = self.value_q_network(i)
         o = tf.gather_nd(o, a) ## check if its right
         return Model(inputs=[i, a], outputs=[o])
-
 
