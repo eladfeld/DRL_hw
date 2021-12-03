@@ -1,7 +1,7 @@
 from hw1.agent_interface import AgentInterface
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Input, BatchNormalization
+from tensorflow.keras.layers import Dense, Input, BatchNormalization, Dropout
 from tensorflow.keras.models import clone_model, Model
 from tensorflow.keras.optimizers import Adam, RMSprop
 from tensorflow.keras import backend as K
@@ -29,13 +29,11 @@ class Agent(AgentInterface):
         self.min_epsilon = args_dict['min_epsilon']
         self.min_lr = args_dict['min_lr']
         self.lr_decay_factor = args_dict['lr_decay_factor']
-        self.lr_decay_step = args_dict['lr_decay_step']
-
 
     def _read_arguments(self, args_dict):
         possible_args = ['epsilon', 'epsilon_decay_factor', 'epsilon_decay_steps', 'min_epsilon', 'layers',
                          'learning_rate', 'target_update_steps', 'steps', 'discount_factor', 'lr_decay_factor',
-                         'lr_decay_step', 'min_lr']
+                         'min_lr']
         args = {}
         for key in args_dict.keys():
             if key in possible_args:
@@ -86,7 +84,6 @@ class Agent(AgentInterface):
         ys[undone_indices] += rewards[undone_indices] + self.discount_factor * q_next
         ys = ys
         actions = np.concatenate([np.indices(actions.shape).T, np.expand_dims(actions, axis=0).T], axis=1)
-        # if self.environment.step_num == self.lr_decay_step and self.learning_rate > self.min_lr:
         if self.environment.is_done() and self.learning_rate > self.min_lr:
             self.learning_rate = self.lr_decay_factor * self.learning_rate
             K.set_value(self.training_model.optimizer.learning_rate, self.learning_rate)
@@ -94,7 +91,7 @@ class Agent(AgentInterface):
         if self.step % 100 == 0:
             print('loss: %1.4f' % loss)
         self.step += 1
-        if self.step % self.target_update_steps == 0 or self.step < 50:
+        if self.step % self.target_update_steps == 0:
             self._update_target()
         if self.step % self.epsilon_decay_steps == 0:
             self._update_epsilon()
@@ -122,6 +119,8 @@ class Agent(AgentInterface):
         d = i
         for layer in layers:
             d = Dense(layer, activation='relu')(d)
+            d = Dropout(rate=0.2)(d)
+            d = BatchNormalization()(d)
         o = Dense(len(self.actions), activation='linear')(d)
 
         return Model(inputs=i, outputs=o)
