@@ -86,7 +86,8 @@ class Agent(AgentInterface):
         ys[undone_indices] += rewards[undone_indices] + self.discount_factor * q_next
         ys = ys
         actions = np.concatenate([np.indices(actions.shape).T, np.expand_dims(actions, axis=0).T], axis=1)
-        if self.environment.step_num == self.lr_decay_step and self.learning_rate > self.min_lr:
+        # if self.environment.step_num == self.lr_decay_step and self.learning_rate > self.min_lr:
+        if self.environment.is_done() and self.learning_rate > self.min_lr:
             self.learning_rate = self.lr_decay_factor * self.learning_rate
             K.set_value(self.training_model.optimizer.learning_rate, self.learning_rate)
         loss = self.training_model.train_on_batch(x=[states, actions], y=ys)

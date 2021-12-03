@@ -19,7 +19,7 @@ def parse_args():
                         help='optional, epsilon decay factor value for epsilon greedy policy, legal range [0, 1].')
     parser.add_argument('--epsilon_decay_steps', dest='epsilon_decay_steps', type=int, default=1,
                         help='optional, epsilon decay factor value for epsilon greedy policy, legal range [0, 1].')
-    parser.add_argument('--min_epsilon', dest='min_epsilon', type=float, default=5e-3,
+    parser.add_argument('--min_epsilon', dest='min_epsilon', type=float, default=2e-3,
                         help='min epsilon value')
     parser.add_argument('--episodes', dest='episodes', type=int, default=5000,
                         help='optional, max episodes for q_learning')
@@ -29,11 +29,11 @@ def parse_args():
                             help = 'optional, discount factor for q learning algorithm')
     parser.add_argument('--learning_rate', dest='learning_rate', type=float, default=0.1,
                          help='optional,learning rate')
-    parser.add_argument('--batch_size', dest='batch_size', type=int, default=256,
+    parser.add_argument('--batch_size', dest='batch_size', type=int, default=512,
                         help='optional, batch size for dqn training')
-    parser.add_argument('--layers', dest='layers', type=int, nargs='+', default=[32, 16, 8],
+    parser.add_argument('--layers', dest='layers', type=int, nargs='+', default=[32, 32, 32],
                         help='optional, hidden layers for dqn network')
-    parser.add_argument('--target_update_steps', dest='target_update_steps', type=int, default=400,
+    parser.add_argument('--target_update_steps', dest='target_update_steps', type=int, default=100,
                         help='optional, steps to update dqn target network')
     parser.add_argument('--experience_replay_capacity', dest='experience_replay_capacity', type=int, default=100000,
                         help='optional, steps to update dqn target network')
@@ -41,7 +41,7 @@ def parse_args():
                         help='optional, decay factor for learning rate decay')
     parser.add_argument('--lr_decay_step', dest='lr_decay_step', type=int, default=-1,
                         help='decay the lr every time the agent reach to this step in an episode, default: -1 (dont use)')
-    parser.add_argument('--min_lr', dest='min_lr', type=float, default=1e-8,
+    parser.add_argument('--min_lr', dest='min_lr', type=float, default=1e-6,
                         help='min learning rate for dqn')
     return parser.parse_args()
 
