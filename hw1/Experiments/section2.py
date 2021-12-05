@@ -1,6 +1,8 @@
 from hw1.experiment_interface import ExperimentInterface
 from matplotlib import pyplot as plt
 import numpy as np
+import os
+import tensorflow as tf
 
 
 class Experiment(ExperimentInterface):
@@ -11,10 +13,19 @@ class Experiment(ExperimentInterface):
         self.episode = 0
         self.max_steps = args_dict['steps']
         self.rewards = []
+        log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs', 'section2')
+        self.writer = tf.summary.create_file_writer(log_path)
 
     def update(self, **kwargs):
         self.episode += 1
-        self.rewards.append(len(kwargs['rewards']))
+        reward = np.sum(kwargs['rewards'])
+        self.rewards.append(reward)
+        loss = self.agent.last_episode_loss
+        print('episode: %d, loss: %1.2f, reward %d' % (self.episode, loss, reward))
+        with self.writer.as_default():
+            tf.summary.scalar("loss", loss, step=self.episode)
+            tf.summary.scalar("reward", reward, step=self.episode)
+            self.writer.flush()
 
 
     def show(self):
@@ -35,3 +46,12 @@ class Experiment(ExperimentInterface):
 
     def is_done(self):
         return len(self.rewards) > 100 and np.mean(self.rewards[-101: -1]) >= 475
+
+    def _write_log(self, names, logs, episode_no):
+        for name, value in zip(names, logs):
+            summary = tf.Summary()
+            summary_value = summary.value.add()
+            summary_value.simple_value = value
+            summary_value.tag = name
+            self.tensorboard.writer.add_summary(summary, episode_no)
+            self.tensorboard.writer.flush()

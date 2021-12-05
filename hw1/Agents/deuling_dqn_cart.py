@@ -22,7 +22,7 @@ class Agent(AgentInterface):
         self.value_q_network = None
         self.target_q_network = None
         self.training_model = None
-        self.target_update_steps = self.args['target_update_steps']
+        self.target_update_steps = self.args['target_update_episodes']
         self.step = 0
         self.discount_factor = self.args['discount_factor']
         self.learning_rate = self.args['learning_rate']
@@ -34,7 +34,7 @@ class Agent(AgentInterface):
 
     def _read_arguments(self, args_dict):
         possible_args = ['epsilon', 'epsilon_decay_factor', 'epsilon_decay_steps', 'min_epsilon', 'layers',
-                         'learning_rate', 'target_update_steps', 'steps', 'discount_factor', 'lr_decay_factor',
+                         'learning_rate', 'target_update_episodes', 'steps', 'discount_factor', 'lr_decay_factor',
                          'lr_decay_step', 'min_lr']
         args = {}
         for key in args_dict.keys():

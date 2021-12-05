@@ -6,7 +6,6 @@ from tensorflow.keras.models import clone_model, Model
 from tensorflow.keras.optimizers import Adam, RMSprop
 from tensorflow.keras import backend as K
 
-
 class Agent(AgentInterface):
     def __init__(self, environment, args_dict):
         super().__init__(environment, 'dqn_cart')
@@ -22,17 +21,21 @@ class Agent(AgentInterface):
         self.value_q_network = None
         self.target_q_network = None
         self.training_model = None
-        self.target_update_steps = self.args['target_update_steps']
+        self.target_update_episodes = self.args['target_update_episodes']
         self.step = 0
+        self.episode = 0
         self.discount_factor = self.args['discount_factor']
         self.learning_rate = self.args['learning_rate']
         self.min_epsilon = args_dict['min_epsilon']
         self.min_lr = args_dict['min_lr']
         self.lr_decay_factor = args_dict['lr_decay_factor']
+        self.perfect_counter = 0
+        self.episode_losses = []
+        self.last_episode_loss = 0
 
     def _read_arguments(self, args_dict):
         possible_args = ['epsilon', 'epsilon_decay_factor', 'epsilon_decay_steps', 'min_epsilon', 'layers',
-                         'learning_rate', 'target_update_steps', 'steps', 'discount_factor', 'lr_decay_factor',
+                         'learning_rate', 'target_update_episodes', 'steps', 'discount_factor', 'lr_decay_factor',
                          'min_lr']
         args = {}
         for key in args_dict.keys():
@@ -84,15 +87,28 @@ class Agent(AgentInterface):
         ys[undone_indices] += rewards[undone_indices] + self.discount_factor * q_next
         ys = ys
         actions = np.concatenate([np.indices(actions.shape).T, np.expand_dims(actions, axis=0).T], axis=1)
-        if self.environment.is_done() and self.learning_rate > self.min_lr:
-            self.learning_rate = self.lr_decay_factor * self.learning_rate
-            K.set_value(self.training_model.optimizer.learning_rate, self.learning_rate)
         loss = self.training_model.train_on_batch(x=[states, actions], y=ys)
-        if self.step % 100 == 0:
-            print('loss: %1.4f' % loss)
+        self.episode_losses.append(loss)
         self.step += 1
-        if self.step % self.target_update_steps == 0:
-            self._update_target()
+
+        if self.environment.is_done():
+            self.episode += 1
+            if self.environment.step_num == 500:
+                self.perfect_counter += 1
+            else:
+                self.perfect_counter = 0
+            if self.episode % self.target_update_episodes == 0:
+                self._update_target()
+            if self.learning_rate > self.min_lr:
+                self.learning_rate = self.lr_decay_factor * self.learning_rate
+                K.set_value(self.training_model.optimizer.learning_rate, self.learning_rate)
+                if self.perfect_counter == 4:
+                    print('plato phase')
+                    self.learning_rate = self.min_lr
+                    K.set_value(self.training_model.optimizer.learning_rate, self.learning_rate)
+                    K.set_value(self.training_model.optimizer.clipnorm, 0.01)
+            self.last_episode_loss = np.mean(self.episode_losses)
+            self.episode_losses = []
         if self.step % self.epsilon_decay_steps == 0:
             self._update_epsilon()
 
@@ -104,7 +120,6 @@ class Agent(AgentInterface):
             self.epsilon = self.epsilon * self.epsilon_decay_factor
         if self.epsilon < self.min_epsilon:
             self.epsilon = self.min_epsilon
-        print('epsilon: %1.3f' % self.epsilon)
 
     def get_all_actions(self):
         return self.actions
@@ -119,7 +134,6 @@ class Agent(AgentInterface):
         d = i
         for layer in layers:
             d = Dense(layer, activation='relu')(d)
-            d = Dropout(rate=0.2)(d)
             d = BatchNormalization()(d)
         o = Dense(len(self.actions), activation='linear')(d)
 
@@ -129,7 +143,7 @@ class Agent(AgentInterface):
         i = Input(shape=self.states_shape)
         a = Input(shape=(2,), dtype='int32')
         o = self.value_q_network(i)
-        o = tf.gather_nd(o, a) ## check if its right
+        o = tf.gather_nd(o, a)
         return Model(inputs=[i, a], outputs=[o])
 
 

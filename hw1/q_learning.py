@@ -5,6 +5,7 @@ import os
 import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 deep_agents = ['dqn_cart', 'deuling_dqn_cart']
+np.random.seed(0)
 def parse_args():
     parser = argparse.ArgumentParser(description='q-learning arguments')
     parser.add_argument('-e', dest='environment', type=str, required=True,
@@ -19,7 +20,7 @@ def parse_args():
                         help='optional, epsilon decay factor value for epsilon greedy policy, legal range [0, 1].')
     parser.add_argument('--epsilon_decay_steps', dest='epsilon_decay_steps', type=int, default=1,
                         help='optional, epsilon decay factor value for epsilon greedy policy, legal range [0, 1].')
-    parser.add_argument('--min_epsilon', dest='min_epsilon', type=float, default=2e-3,
+    parser.add_argument('--min_epsilon', dest='min_epsilon', type=float, default=5e-3,
                         help='min epsilon value')
     parser.add_argument('--episodes', dest='episodes', type=int, default=5000,
                         help='optional, max episodes for q_learning')
@@ -33,13 +34,13 @@ def parse_args():
                         help='optional, batch size for dqn training')
     parser.add_argument('--layers', dest='layers', type=int, nargs='+', default=[32, 32, 32],
                         help='optional, hidden layers for dqn network')
-    parser.add_argument('--target_update_steps', dest='target_update_steps', type=int, default=100,
+    parser.add_argument('--target_update_episodes', dest='target_update_episodes', type=int, default=2,
                         help='optional, steps to update dqn target network')
-    parser.add_argument('--experience_replay_capacity', dest='experience_replay_capacity', type=int, default=100000,
+    parser.add_argument('--experience_replay_capacity', dest='experience_replay_capacity', type=int, default=50000,
                         help='optional, steps to update dqn target network')
     parser.add_argument('--lr_decay_factor', dest='lr_decay_factor', type=float, default=1.,
                         help='optional, decay factor for learning rate decay')
-    parser.add_argument('--min_lr', dest='min_lr', type=float, default=1e-6,
+    parser.add_argument('--min_lr', dest='min_lr', type=float, default=1e-8,
                         help='min learning rate for dqn')
     return parser.parse_args()
 
@@ -79,7 +80,6 @@ def deep_q_learning(args):
             cache_to_experience_replay(args, experience_replay, state, action, reward, new_state, d)
             states, actions, rewards, new_states, ds = get_batch(args, experience_replay)
             agent.update_q(states=states, actions=actions, rewards=rewards, new_states=new_states, ds=ds)
-        print("episode: %d, steps: %d" % (episode, steps))
         if run_experiment:
             experiment.update(steps=steps, rewards=episode_rewards)
             if experiment.is_done():
