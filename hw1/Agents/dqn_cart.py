@@ -59,7 +59,7 @@ class Agent(AgentInterface):
         self.target_q_network = clone_model(self.value_q_network)
         self.target_q_network.set_weights(self.value_q_network.get_weights())
         self.training_model = self._build_training_model()
-        optimizer = Adam(learning_rate=self.learning_rate)
+        optimizer = Adam(learning_rate=self.learning_rate, clipnorm=.005)
         self.training_model.compile(optimizer, loss='mse')
 
 
@@ -102,11 +102,10 @@ class Agent(AgentInterface):
             if self.learning_rate > self.min_lr:
                 self.learning_rate = self.lr_decay_factor * self.learning_rate
                 K.set_value(self.training_model.optimizer.learning_rate, self.learning_rate)
-                if self.perfect_counter == 4:
+                if self.perfect_counter == 7:
                     print('plato phase')
                     self.learning_rate = self.min_lr
                     K.set_value(self.training_model.optimizer.learning_rate, self.learning_rate)
-                    K.set_value(self.training_model.optimizer.clipnorm, 0.01)
             self.last_episode_loss = np.mean(self.episode_losses)
             self.episode_losses = []
         if self.step % self.epsilon_decay_steps == 0:
