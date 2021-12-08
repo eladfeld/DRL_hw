@@ -40,7 +40,7 @@ def parse_args():
                         help='optional, steps to update dqn target network')
     parser.add_argument('--lr_decay_factor', dest='lr_decay_factor', type=float, default=1.,
                         help='optional, decay factor for learning rate decay')
-    parser.add_argument('--min_lr', dest='min_lr', type=float, default=1e-9,
+    parser.add_argument('--min_lr', dest='min_lr', type=float, default=1e-10,
                         help='min learning rate for dqn')
     return parser.parse_args()
 

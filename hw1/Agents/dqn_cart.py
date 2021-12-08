@@ -32,6 +32,7 @@ class Agent(AgentInterface):
         self.perfect_counter = 0
         self.episode_losses = []
         self.last_episode_loss = 0
+        self.plato_phase=False
 
     def _read_arguments(self, args_dict):
         possible_args = ['epsilon', 'epsilon_decay_factor', 'epsilon_decay_steps', 'min_epsilon', 'layers',
@@ -93,18 +94,20 @@ class Agent(AgentInterface):
 
         if self.environment.is_done():
             self.episode += 1
-            if self.environment.step_num == 500:
-                self.perfect_counter += 1
-            else:
-                self.perfect_counter = 0
             if self.episode % self.target_update_episodes == 0:
                 self._update_target()
-            if self.learning_rate > self.min_lr:
-                self.learning_rate = self.lr_decay_factor * self.learning_rate
-                K.set_value(self.training_model.optimizer.learning_rate, self.learning_rate)
+            if not self.plato_phase:
+                if self.environment.step_num == 500:
+                    self.perfect_counter += 1
+                else:
+                    self.perfect_counter = 0
                 if self.perfect_counter == 7:
+                    self.plato_phase = True
                     print('plato phase')
                     self.learning_rate = self.min_lr
+                    K.set_value(self.training_model.optimizer.learning_rate, self.min_lr)
+                elif self.learning_rate > self.min_lr:
+                    self.learning_rate = self.lr_decay_factor * self.learning_rate
                     K.set_value(self.training_model.optimizer.learning_rate, self.learning_rate)
             self.last_episode_loss = np.mean(self.episode_losses)
             self.episode_losses = []
