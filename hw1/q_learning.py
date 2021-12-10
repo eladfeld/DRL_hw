@@ -5,6 +5,7 @@ import os
 import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 deep_agents = ['dqn_cart', 'dueling_dqn_cart', 'double_dqn_cart']
+deep_td1_agents = ['double_td1']
 np.random.seed(0)
 def parse_args():
     parser = argparse.ArgumentParser(description='q-learning arguments')
@@ -46,11 +47,12 @@ def parse_args():
 
 def main():
     args = vars(parse_args())
-    is_deep = args['agent'] in deep_agents
-    if not is_deep:
-        q_learning(args)
-    else:
+    if args['agent'] in deep_td1_agents:
+        deep_q_learning_td1(args)
+    elif args['agent'] in deep_agents:
         deep_q_learning(args)
+    else:
+        q_learning(args)
 
 def deep_q_learning(args):
     agent_class = getattr(import_module('hw1.Agents.' + args['agent']), 'Agent')
@@ -62,7 +64,7 @@ def deep_q_learning(args):
     if run_experiment:
         experiment_class = getattr(import_module('hw1.Experiments.' + args['experiment']), 'Experiment')
         experiment = experiment_class(environment, agent, args)
-    print('Running q_learning with Environment: %s, Agent: %s' % (environment, agent))
+    print('Running deep_q_learning with Environment: %s, Agent: %s' % (environment, agent))
     agent.initialize_q()
     experience_replay = []
     for episode in range(args['episodes']):
@@ -80,6 +82,40 @@ def deep_q_learning(args):
             cache_to_experience_replay(args, experience_replay, state, action, reward, new_state, d)
             states, actions, rewards, new_states, ds = get_batch(args, experience_replay)
             agent.update_q(states=states, actions=actions, rewards=rewards, new_states=new_states, ds=ds)
+        if run_experiment:
+            experiment.update(steps=steps, rewards=episode_rewards)
+            if experiment.is_done():
+                break
+    if run_experiment:
+        experiment.show()
+    print('done')
+
+def deep_q_learning_td1(args):
+    agent_class = getattr(import_module('hw1.Agents.' + args['agent']), 'Agent')
+    environment_class = getattr(import_module('hw1.Environments.' + args['environment']), 'Environment')
+    environment = environment_class(args)
+    agent = agent_class(environment, args)
+    run_experiment = args['experiment'] is not None
+    experiment = None
+    if run_experiment:
+        experiment_class = getattr(import_module('hw1.Experiments.' + args['experiment']), 'Experiment')
+        experiment = experiment_class(environment, agent, args)
+    print('Running deep_q_learning_td1 with Environment: %s, Agent: %s' % (environment, agent))
+    agent.initialize_q()
+    experience_replay = []
+    for episode in range(args['episodes']):
+        episode_rewards = []
+        steps = 0
+        environment.initialize_state()
+        while not environment.is_done() and steps < args['steps']:
+            state = environment.get_state()
+            action, _ = agent.get_action_by_policy(state)
+            reward = environment.step(action)
+            episode_rewards.append(reward)
+            d = environment.is_done()
+            steps += 1
+            new_state = environment.get_state()
+            agent.update_q(state=state, action=action, reward=reward, new_state=new_state, d=d)
         if run_experiment:
             experiment.update(steps=steps, rewards=episode_rewards)
             if experiment.is_done():

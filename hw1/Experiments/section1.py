@@ -1,6 +1,8 @@
 from hw1.experiment_interface import ExperimentInterface
 from matplotlib import pyplot as plt
 import numpy as np
+import os
+import tensorflow as tf
 
 
 class Experiment(ExperimentInterface):
@@ -15,6 +17,9 @@ class Experiment(ExperimentInterface):
         self.rewards = []
         self.steps = []
         self.final_state = len(self.environment.get_all_states()) - 1
+        log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs', 'section1')
+        self.writer = tf.summary.create_file_writer(log_path)
+        print('saving logs to: %s' % log_path)
 
     def update(self, **kwargs):
         self.episode += 1
@@ -22,9 +27,17 @@ class Experiment(ExperimentInterface):
         reward = kwargs['rewards'][-1]
         self.rewards.append(reward)
         steps = steps if self.environment.get_state() == self.final_state else self.max_steps
+        avg_length = min(100, len(self.steps))
+        avg_steps = np.mean(self.steps[len(self.steps)-avg_length: len(self.steps)])
         self.steps.append(steps)
         if self.episode in self.steps_to_cache_q:
             self.q_cache.append(self.agent.q_lookup_table)
+
+        with self.writer.as_default():
+            tf.summary.scalar("reward", reward, step=self.episode)
+            tf.summary.scalar("steps", steps, step=self.episode)
+            tf.summary.scalar("avg_steps", avg_steps, step=self.episode)
+            self.writer.flush()
 
     def _plot_heatmap(self, Q, episode):
         """

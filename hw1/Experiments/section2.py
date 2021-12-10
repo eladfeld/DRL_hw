@@ -15,6 +15,7 @@ class Experiment(ExperimentInterface):
         self.rewards = []
         log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs', 'section2')
         self.writer = tf.summary.create_file_writer(log_path)
+        print('saving logs to: %s' % log_path)
 
     def update(self, **kwargs):
         self.episode += 1
