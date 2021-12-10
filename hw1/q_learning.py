@@ -4,7 +4,7 @@ import sys
 import os
 import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-deep_agents = ['dqn_cart', 'dueling_dqn_cart']
+deep_agents = ['dqn_cart', 'dueling_dqn_cart', 'double_dqn_cart']
 np.random.seed(0)
 def parse_args():
     parser = argparse.ArgumentParser(description='q-learning arguments')

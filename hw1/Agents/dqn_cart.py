@@ -101,7 +101,7 @@ class Agent(AgentInterface):
                     self.perfect_counter += 1
                 else:
                     self.perfect_counter = 0
-                if self.perfect_counter == 7:
+                if self.perfect_counter == 6:
                     self.plato_phase = True
                     print('plato phase')
                     self.learning_rate = self.min_lr
