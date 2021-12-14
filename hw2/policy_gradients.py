@@ -1,7 +1,11 @@
 import gym
 import numpy as np
 import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import collections
+
+
+tf.disable_v2_behavior()
 
 
 env = gym.make('CartPole-v1')
@@ -21,9 +25,9 @@ class PolicyNetwork:
             self.action = tf.placeholder(tf.int32, [self.action_size], name="action")
             self.R_t = tf.placeholder(tf.float32, name="total_rewards")
 
-            self.W1 = tf.get_variable("W1", [self.state_size, 12], initializer=tf.contrib.layers.xavier_initializer(seed=0))
+            self.W1 = tf.get_variable("W1", [self.state_size, 12], initializer=tf.keras.initializers.glorot_normal(seed=0))
             self.b1 = tf.get_variable("b1", [12], initializer=tf.zeros_initializer())
-            self.W2 = tf.get_variable("W2", [12, self.action_size], initializer=tf.contrib.layers.xavier_initializer(seed=0))
+            self.W2 = tf.get_variable("W2", [12, self.action_size], initializer=tf.keras.initializers.glorot_normal(seed=0))
             self.b2 = tf.get_variable("b2", [self.action_size], initializer=tf.zeros_initializer())
 
             self.Z1 = tf.add(tf.matmul(self.state, self.W1), self.b1)
@@ -53,6 +57,15 @@ render = False
 tf.reset_default_graph()
 policy = PolicyNetwork(state_size, action_size, learning_rate)
 
+
+def _write_log(self, names, logs, episode_no):
+    for name, value in zip(names, logs):
+        summary = tf.Summary()
+        summary_value = summary.value.add()
+        summary_value.simple_value = value
+        summary_value.tag = name
+        self.tensorboard.writer.add_summary(summary, episode_no)
+        self.tensorboard.writer.flush()
 
 # Start training the agent with REINFORCE algorithm
 with tf.Session() as sess:
