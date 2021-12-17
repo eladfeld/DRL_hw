@@ -1,17 +1,18 @@
-import random
-random.seed(1)
-import numpy as np
-np.random.seed(1)
-import tensorflow.compat.v1 as tf
-tf.random.set_random_seed(1)
 import gym
+import numpy as np
+import tensorflow as tf
+import tensorflow.compat.v1 as tf
 # import tensorflow.compat.v1.summary.FileWriter
 import collections
 import os
+
 tf.disable_v2_behavior()
 
 
 env = gym.make('CartPole-v1')
+
+np.random.seed(1)
+
 
 class PolicyNetwork:
     def __init__(self, state_size, action_size, learning_rate, name='policy_network'):
@@ -22,7 +23,6 @@ class PolicyNetwork:
         with tf.variable_scope(name):
 
             self.state = tf.placeholder(tf.float32, [None, self.state_size], name="state")
-            self.baseline = tf.placeholder(tf.float32, [None, 1], name="state")
             self.action = tf.placeholder(tf.int32, [self.action_size], name="action")
             self.R_t = tf.placeholder(tf.float32, name="total_rewards")
 
@@ -39,35 +39,7 @@ class PolicyNetwork:
             self.actions_distribution = tf.squeeze(tf.nn.softmax(self.output))
             # Loss with negative log probability
             self.neg_log_prob = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.output, labels=self.action)
-            self.R_t_no_base_line = tf.subtract(self.R_t, self.baseline)
             self.loss = tf.reduce_mean(self.neg_log_prob * self.R_t)
-            self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
-
-class ValueNetwork:
-    def __init__(self, state_size, action_size, learning_rate, name='value_network'):
-        self.state_size = state_size
-        self.action_size = action_size
-        self.learning_rate = learning_rate
-
-        with tf.variable_scope(name):
-
-            self.state = tf.placeholder(tf.float32, [None, self.state_size], name="state")
-            self.action = tf.placeholder(tf.int32, [self.action_size], name="action")
-            self.R_t = tf.placeholder(tf.float32, name="total_rewards")
-
-            self.W1 = tf.get_variable("W1", [self.state_size, 12], initializer=tf.keras.initializers.glorot_normal(seed=0))
-            self.b1 = tf.get_variable("b1", [12], initializer=tf.zeros_initializer())
-            self.W2 = tf.get_variable("W2", [12, 1], initializer=tf.keras.initializers.glorot_normal(seed=0))
-            self.b2 = tf.get_variable("b2", [1], initializer=tf.zeros_initializer())
-
-            self.Z1 = tf.add(tf.matmul(self.state, self.W1), self.b1)
-            self.A1 = tf.nn.relu(self.Z1)
-            self.output = tf.add(tf.matmul(self.A1, self.W2), self.b2)
-
-
-            # Softmax probability distribution over actions
-            self.l = tf.nn.l2_loss(tf.subtract(self.output, self.R_t))
-            self.loss = tf.reduce_mean(self.l)
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
 
@@ -85,7 +57,6 @@ render = False
 # Initialize the policy network
 tf.reset_default_graph()
 policy = PolicyNetwork(state_size, action_size, learning_rate)
-value = ValueNetwork(state_size, action_size, learning_rate)
 
 # tensorboard logs
 loss_placeholder = tf.compat.v1.placeholder(tf.float32)
@@ -105,7 +76,7 @@ print('saving logs to: %s' % log_path)
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     solved = False
-    Transition = collections.namedtuple("Transition", ["state", "action", "reward", "next_state", "done", "baseline"])
+    Transition = collections.namedtuple("Transition", ["state", "action", "reward", "next_state", "done"])
     episode_rewards = np.zeros(max_episodes)
     average_rewards = 0.0
 
@@ -115,8 +86,7 @@ with tf.Session() as sess:
         episode_transitions = []
 
         for step in range(max_steps):
-            baseline = sess.run(value.output, {value.state: state})
-            actions_distribution = sess.run(policy.actions_distribution, {policy.state: state, policy.baseline:baseline})
+            actions_distribution = sess.run(policy.actions_distribution, {policy.state: state})
             action = np.random.choice(np.arange(len(actions_distribution)), p=actions_distribution)
             next_state, reward, done, _ = env.step(action)
             next_state = next_state.reshape([1, state_size])
@@ -126,8 +96,7 @@ with tf.Session() as sess:
 
             action_one_hot = np.zeros(action_size)
             action_one_hot[action] = 1
-            episode_transitions.append(Transition(state=state, action=action_one_hot, reward=reward,
-                                                  next_state=next_state, done=done, baseline=baseline))
+            episode_transitions.append(Transition(state=state, action=action_one_hot, reward=reward, next_state=next_state, done=done))
             episode_rewards[episode] += reward
 
             if done:
@@ -148,12 +117,8 @@ with tf.Session() as sess:
         episode_losses = []
         for t, transition in enumerate(episode_transitions):
             total_discounted_return = sum(discount_factor ** i * t.reward for i, t in enumerate(episode_transitions[t:])) # Rt
-            value_feed_dict = {value.state: transition.state, value.R_t: total_discounted_return,
-                                value.action: transition.action}
-            _, loss = sess.run([value.optimizer, value.loss], value_feed_dict)
-            policy_feed_dict = {policy.state: transition.state, policy.R_t: total_discounted_return,
-                                policy.action: transition.action, policy.baseline: transition.baseline}
-            _, loss = sess.run([policy.optimizer, policy.loss], policy_feed_dict)
+            feed_dict = {policy.state: transition.state, policy.R_t: total_discounted_return, policy.action: transition.action}
+            _, loss = sess.run([policy.optimizer, policy.loss], feed_dict)
             episode_losses.append(loss)
         avg_loss = np.mean(loss)
 
