@@ -2,8 +2,9 @@ import gym
 import numpy as np
 import tensorflow as tf
 import tensorflow.compat.v1 as tf
+# import tensorflow.compat.v1.summary.FileWriter
 import collections
-
+import os
 
 tf.disable_v2_behavior()
 
@@ -57,15 +58,11 @@ render = False
 tf.reset_default_graph()
 policy = PolicyNetwork(state_size, action_size, learning_rate)
 
-
-def _write_log(self, names, logs, episode_no):
-    for name, value in zip(names, logs):
-        summary = tf.Summary()
-        summary_value = summary.value.add()
-        summary_value.simple_value = value
-        summary_value.tag = name
-        self.tensorboard.writer.add_summary(summary, episode_no)
-        self.tensorboard.writer.flush()
+log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+if not os.path.isdir(log_path):
+    os.mkdir(log_path)
+writer = create_file_writer(log_path)
+print('saving logs to: %s' % log_path)
 
 # Start training the agent with REINFORCE algorithm
 with tf.Session() as sess:
@@ -109,7 +106,18 @@ with tf.Session() as sess:
             break
 
         # Compute Rt for each time-step t and update the network's weights
+        episode_losses = []
         for t, transition in enumerate(episode_transitions):
             total_discounted_return = sum(discount_factor ** i * t.reward for i, t in enumerate(episode_transitions[t:])) # Rt
             feed_dict = {policy.state: transition.state, policy.R_t: total_discounted_return, policy.action: transition.action}
             _, loss = sess.run([policy.optimizer, policy.loss], feed_dict)
+            episode_losses.append(loss)
+        avg_loss = np.mean(loss)
+        with writer.as_default():
+            scalar("loss", avg_loss, step=episode)
+            scalar("return", episode_rewards[episode], step=episode)
+            if episode > 98:
+                scalar("average_rewards", average_rewards, step=episode)
+            else:
+                scalar("average_rewards", 0, step=episode)
+            writer.flush()
