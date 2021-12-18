@@ -40,7 +40,7 @@ class PolicyNetwork:
             # Loss with negative log probability
             self.neg_log_prob = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.output, labels=self.action)
             self.R_t_no_base_line = tf.subtract(self.R_t, self.baseline)
-            self.loss = tf.reduce_mean(self.neg_log_prob * self.R_t)
+            self.loss = tf.reduce_mean(self.neg_log_prob * self.R_t_no_base_line)
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
 class ValueNetwork:
@@ -57,8 +57,8 @@ class ValueNetwork:
 
             self.W1 = tf.get_variable("W1", [self.state_size, 12], initializer=tf.keras.initializers.glorot_normal(seed=0))
             self.b1 = tf.get_variable("b1", [12], initializer=tf.zeros_initializer())
-            self.W2 = tf.get_variable("W2", [12, 1], initializer=tf.keras.initializers.glorot_normal(seed=0))
-            self.b2 = tf.get_variable("b2", [1], initializer=tf.zeros_initializer())
+            self.W2 = tf.get_variable("W3", [12, 1], initializer=tf.keras.initializers.glorot_normal(seed=0))
+            self.b2 = tf.get_variable("b3", [1], initializer=tf.zeros_initializer())
 
             self.Z1 = tf.add(tf.matmul(self.state, self.W1), self.b1)
             self.A1 = tf.nn.relu(self.Z1)
@@ -72,7 +72,7 @@ class ValueNetwork:
 
 
 # Define hyperparameters
-state_size = 4
+state_size = 5
 action_size = env.action_space.n
 
 max_episodes = 5000
@@ -111,6 +111,7 @@ with tf.Session() as sess:
 
     for episode in range(max_episodes):
         state = env.reset()
+        state = np.concatenate([state, np.asarray([0])])
         state = state.reshape([1, state_size])
         episode_transitions = []
 
@@ -119,8 +120,8 @@ with tf.Session() as sess:
             actions_distribution = sess.run(policy.actions_distribution, {policy.state: state, policy.baseline:baseline})
             action = np.random.choice(np.arange(len(actions_distribution)), p=actions_distribution)
             next_state, reward, done, _ = env.step(action)
+            next_state = np.concatenate([next_state, np.asarray([(step + 1) / max_steps])])
             next_state = next_state.reshape([1, state_size])
-
             if render:
                 env.render()
 
