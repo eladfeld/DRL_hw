@@ -27,11 +27,11 @@ class Agent(AgentInterface):
 
     def _check_epsilon_greedy_parameters(self):
         if self.epsilon < 0 or self.epsilon >= 1:
-            raise ValueError('epsilon value should be between 0 to 1')
+            raise ValueError('epsilon critic should be between 0 to 1')
         if self.epsilon_decay_factor < 0 or self.epsilon_decay_factor > 1:
-            raise ValueError('epsilon_decay_factor value should be between 0 to 1')
+            raise ValueError('epsilon_decay_factor critic should be between 0 to 1')
         if self.epsilon_decay_steps < 1 or not isinstance(self.epsilon_decay_steps, int):
-            raise ValueError('epsilon_decay_steps value should be integer bigger then  1')
+            raise ValueError('epsilon_decay_steps critic should be integer bigger then  1')
 
     def initialize_q(self):
         self.q_lookup_table = np.zeros(shape=[len(self.states), len(self.actions)])

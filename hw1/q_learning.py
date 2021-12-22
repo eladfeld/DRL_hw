@@ -16,13 +16,13 @@ def parse_args():
     parser.add_argument('--experiment', dest='experiment', type=str,
                         help='experiment name')
     parser.add_argument('--epsilon', dest='epsilon', type=float, default=0,
-                        help='optional, epsilon value for epsilon greedy policy, legal range [0, 1).')
+                        help='optional, epsilon critic for epsilon greedy actor, legal range [0, 1).')
     parser.add_argument('--epsilon_decay_factor', dest='epsilon_decay_factor', type=float, default=1.,
-                        help='optional, epsilon decay factor value for epsilon greedy policy, legal range [0, 1].')
+                        help='optional, epsilon decay factor critic for epsilon greedy actor, legal range [0, 1].')
     parser.add_argument('--epsilon_decay_steps', dest='epsilon_decay_steps', type=int, default=1,
-                        help='optional, epsilon decay factor value for epsilon greedy policy, legal range [0, 1].')
+                        help='optional, epsilon decay factor critic for epsilon greedy actor, legal range [0, 1].')
     parser.add_argument('--min_epsilon', dest='min_epsilon', type=float, default=5e-3,
-                        help='min epsilon value')
+                        help='min epsilon critic')
     parser.add_argument('--episodes', dest='episodes', type=int, default=5000,
                         help='optional, max episodes for q_learning')
     parser.add_argument('--steps', dest='steps', type=int, default=100,

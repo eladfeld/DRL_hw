@@ -51,7 +51,7 @@ class Experiment(ExperimentInterface):
     def _write_log(self, names, logs, episode_no):
         for name, value in zip(names, logs):
             summary = tf.Summary()
-            summary_value = summary.value.add()
+            summary_value = summary.critic.add()
             summary_value.simple_value = value
             summary_value.tag = name
             self.tensorboard.writer.add_summary(summary, episode_no)

@@ -46,11 +46,11 @@ class Agent(AgentInterface):
 
     def _check_arguments(self):
         if self.epsilon < 0 or self.epsilon > 1:
-            raise ValueError('epsilon value should be between 0 to 1')
+            raise ValueError('epsilon critic should be between 0 to 1')
         if self.epsilon_decay_factor < 0 or self.epsilon_decay_factor > 1:
-            raise ValueError('epsilon_decay_factor value should be between 0 to 1')
+            raise ValueError('epsilon_decay_factor critic should be between 0 to 1')
         if self.epsilon_decay_steps < 1 or not isinstance(self.epsilon_decay_steps, int):
-            raise ValueError('epsilon_decay_steps value should be integer bigger then  1')
+            raise ValueError('epsilon_decay_steps critic should be integer bigger then  1')
         is_valid_layer = lambda l: isinstance(l, int) and l > 0
         if not hasattr(self.args['layers'], '__iter__') or not all([is_valid_layer(l) for l in self.args['layers']]):
             raise ValueError('layers argument should be iterable with positive integer elements')

@@ -54,7 +54,7 @@ learning_rate = 0.0004
 
 render = False
 
-# Initialize the policy network
+# Initialize the actor network
 tf.reset_default_graph()
 policy = PolicyNetwork(state_size, action_size, learning_rate)
 
