@@ -5,8 +5,6 @@ np.random.seed(1)
 import tensorflow.compat.v1 as tf
 tf.random.set_random_seed(1)
 import gym
-# import tensorflow.compat.v1.summary.FileWriter
-import collections
 import os
 tf.disable_v2_behavior()
 
@@ -24,6 +22,7 @@ class PolicyNetwork:
             self.state = tf.placeholder(tf.float32, [None, self.state_size], name="state")
             self.action = tf.placeholder(tf.int32, [self.action_size], name="action")
             self.td_error = tf.placeholder(tf.float32, name="td_error")
+            self.I = tf.placeholder(tf.float32, name="I")
 
             self.W1 = tf.get_variable("W1", [self.state_size, 12], initializer=tf.keras.initializers.glorot_normal(seed=0))
             self.b1 = tf.get_variable("b1", [12], initializer=tf.zeros_initializer())
@@ -38,7 +37,7 @@ class PolicyNetwork:
             self.actions_distribution = tf.squeeze(tf.nn.softmax(self.output))
             # Loss with negative log probability
             self.neg_log_prob = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.output, labels=self.action)
-            self.loss = tf.reduce_mean(self.neg_log_prob * self.td_error)
+            self.loss = tf.reduce_mean(self.I * self.neg_log_prob * self.td_error)
             self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(self.loss)
 
 class ValueNetwork:
@@ -49,13 +48,14 @@ class ValueNetwork:
         with tf.variable_scope(name):
 
             self.state = tf.placeholder(tf.float32, [None, self.state_size], name="state")
-            self.target = tf.placeholder(tf.float32, name="target")
+            self.td_error = tf.placeholder(tf.float32, name="target")
+            self.I = tf.placeholder(tf.float32, name="I")
 
-            self.W1 = tf.get_variable("W1", [self.state_size, 64], initializer=tf.keras.initializers.glorot_normal(seed=0))
-            self.b1 = tf.get_variable("b1", [64], initializer=tf.zeros_initializer())
-            self.W2 = tf.get_variable("W2", [64, 32], initializer=tf.keras.initializers.glorot_normal(seed=0))
-            self.b2 = tf.get_variable("b2", [32], initializer=tf.zeros_initializer())
-            self.W3 = tf.get_variable("W3", [32, 1], initializer=tf.keras.initializers.glorot_normal(seed=0))
+            self.W1 = tf.get_variable("W1", [self.state_size, 256], initializer=tf.keras.initializers.glorot_normal(seed=0))
+            self.b1 = tf.get_variable("b1", [256], initializer=tf.zeros_initializer())
+            self.W2 = tf.get_variable("W2", [256, 64], initializer=tf.keras.initializers.glorot_normal(seed=0))
+            self.b2 = tf.get_variable("b2", [64], initializer=tf.zeros_initializer())
+            self.W3 = tf.get_variable("W3", [64, 1], initializer=tf.keras.initializers.glorot_normal(seed=0))
             self.b3 = tf.get_variable("b3", [1], initializer=tf.zeros_initializer())
 
             self.Z1 = tf.add(tf.matmul(self.state, self.W1), self.b1)
@@ -64,10 +64,7 @@ class ValueNetwork:
             self.A2 = tf.nn.relu(self.Z2)
             self.output = tf.add(tf.matmul(self.A2, self.W3), self.b3)
 
-            self.loss = tf.reduce_mean(tf.nn.l2_loss(tf.subtract(self.output, self.target)))
-            # self.loss = tf.losses.huber_loss(labels=self.target, predictions=self.output)
-            # self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
-            # self.loss = tf.reduce_mean(self.output * self.target)
+            self.loss = tf.reduce_mean(-self.I * self.output * self.td_error)
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
 # Define hyperparameters
@@ -88,9 +85,9 @@ critic = ValueNetwork(state_size, critic_learning_rate)
 
 # tensorboard logs
 actor_loss_placeholder = tf.compat.v1.placeholder(tf.float32)
-tf.compat.v1.summary.scalar(name="actor_losses", tensor=actor_loss_placeholder)
+tf.compat.v1.summary.scalar(name="policy_losses", tensor=actor_loss_placeholder)
 critic_loss_placeholder = tf.compat.v1.placeholder(tf.float32)
-tf.compat.v1.summary.scalar(name="critic_losses", tensor=actor_loss_placeholder)
+tf.compat.v1.summary.scalar(name="value_losses", tensor=actor_loss_placeholder)
 reward_placeholder = tf.compat.v1.placeholder(tf.float32)
 tf.compat.v1.summary.scalar(name="reward", tensor=reward_placeholder)
 avg_reward_placeholder = tf.compat.v1.placeholder(tf.float32)
@@ -115,6 +112,7 @@ with tf.Session() as sess:
         # state = np.concatenate([state, np.asarray([0])])
         state = state.reshape([1, state_size])
         episode_transitions = []
+        I=1
         for step in range(max_steps):
             value = sess.run(critic.output, {critic.state: state})
             actions_distribution = sess.run(actor.actions_distribution, {actor.state: state})
@@ -135,9 +133,9 @@ with tf.Session() as sess:
             target = reward + discount_factor * next_value
             td_error = target - value
 
-            value_feed_dict = {critic.state: state, critic.target: target}
+            value_feed_dict = {critic.state: state, critic.td_error: td_error, critic.I: I}
             _, critic_loss = sess.run([critic.optimizer, critic.loss], value_feed_dict)
-            policy_feed_dict = {actor.state: state, actor.td_error: td_error, actor.action: action_one_hot}
+            policy_feed_dict = {actor.state: state, actor.td_error: td_error, actor.action: action_one_hot,actor.I: I}
             _, actor_loss = sess.run([actor.optimizer, actor.loss], policy_feed_dict)
             state = next_state
             if done:
@@ -149,6 +147,7 @@ with tf.Session() as sess:
                     print(' Solved at episode: ' + str(episode))
                     solved = True
                 break
+            I = I * discount_factor
 
         if solved:
             break

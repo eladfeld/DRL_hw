@@ -120,7 +120,7 @@ with tf.Session() as sess:
             feed_dict = {policy.state: transition.state, policy.R_t: total_discounted_return, policy.action: transition.action}
             _, loss = sess.run([policy.optimizer, policy.loss], feed_dict)
             episode_losses.append(loss)
-        avg_loss = np.mean(loss)
+        avg_loss = np.mean(episode_losses)
 
         summery = sess.run(summaries, feed_dict={loss_placeholder: avg_loss,
                                                  reward_placeholder: episode_rewards[episode],

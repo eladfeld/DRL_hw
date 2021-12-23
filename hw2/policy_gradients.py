@@ -86,8 +86,10 @@ policy = PolicyNetwork(state_size, action_size, learning_rate)
 value = ValueNetwork(state_size, learning_rate)
 
 # tensorboard logs
-loss_placeholder = tf.compat.v1.placeholder(tf.float32)
-tf.compat.v1.summary.scalar(name="losses", tensor=loss_placeholder)
+policy_loss_placeholder = tf.compat.v1.placeholder(tf.float32)
+tf.compat.v1.summary.scalar(name="policy_loss", tensor=policy_loss_placeholder)
+value_loss_placeholder = tf.compat.v1.placeholder(tf.float32)
+tf.compat.v1.summary.scalar(name="value_loss", tensor=value_loss_placeholder)
 reward_placeholder = tf.compat.v1.placeholder(tf.float32)
 tf.compat.v1.summary.scalar(name="reward", tensor=reward_placeholder)
 avg_reward_placeholder = tf.compat.v1.placeholder(tf.float32)
@@ -103,7 +105,7 @@ print('saving logs to: %s' % log_path)
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     solved = False
-    Transition = collections.namedtuple("Transition", ["state", "action", "reward", "next_state", "done", "value"])
+    Transition = collections.namedtuple("Transition", ["state", "action", "reward", "next_state", "done", "baseline"])
     episode_rewards = np.zeros(max_episodes)
     average_rewards = 0.0
 
@@ -144,18 +146,22 @@ with tf.Session() as sess:
             break
 
         # Compute Rt for each time-step t and update the network's weights
-        episode_losses = []
+        policy_losses = []
+        value_losses = []
         for t, transition in enumerate(episode_transitions):
             total_discounted_return = sum(discount_factor ** i * t.reward for i, t in enumerate(episode_transitions[t:])) # Rt
             value_feed_dict = {value.state: transition.state, value.R_t: total_discounted_return}
-            _, loss = sess.run([value.optimizer, value.loss], value_feed_dict)
+            _, value_loss = sess.run([value.optimizer, value.loss], value_feed_dict)
             policy_feed_dict = {policy.state: transition.state, policy.R_t: total_discounted_return,
                                 policy.action: transition.action, policy.baseline: transition.baseline}
-            _, loss = sess.run([policy.optimizer, policy.loss], policy_feed_dict)
-            episode_losses.append(loss)
-        avg_loss = np.mean(loss)
+            _, policy_loss = sess.run([policy.optimizer, policy.loss], policy_feed_dict)
+            policy_losses.append(policy_loss)
+            value_losses.append(value_loss)
+        avg_value_loss = np.mean(value_losses)
+        avg_policy_loss = np.mean(policy_losses)
 
-        summery = sess.run(summaries, feed_dict={loss_placeholder: avg_loss,
+        summery = sess.run(summaries, feed_dict={policy_loss_placeholder: avg_policy_loss,
+                                                 value_loss_placeholder: avg_value_loss,
                                                  reward_placeholder: episode_rewards[episode],
                                                  avg_reward_placeholder: average_rewards if episode > 98 else 0})
         writer.add_summary(summery, global_step=episode)
