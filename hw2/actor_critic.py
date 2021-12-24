@@ -48,7 +48,7 @@ class ValueNetwork:
         with tf.variable_scope(name):
 
             self.state = tf.placeholder(tf.float32, [None, self.state_size], name="state")
-            self.td_error = tf.placeholder(tf.float32, name="target")
+            self.td_error = tf.placeholder(tf.float32, name='td_error')
             self.I = tf.placeholder(tf.float32, name="I")
 
             self.W1 = tf.get_variable("W1", [self.state_size, 256], initializer=tf.keras.initializers.glorot_normal(seed=0))
