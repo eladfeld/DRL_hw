@@ -138,6 +138,8 @@ with tf.Session() as sess:
             policy_feed_dict = {actor.state: state, actor.td_error: td_error, actor.action: action_one_hot,actor.I: I}
             _, actor_loss = sess.run([actor.optimizer, actor.loss], policy_feed_dict)
             state = next_state
+            episode_critic_loss.append(critic_loss)
+            episode_actor_loss.append(actor_loss)
             if done:
                 if episode > 98:
                     # Check if solved
