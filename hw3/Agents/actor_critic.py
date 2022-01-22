@@ -3,6 +3,7 @@ import numpy as np
 from scipy.special import softmax
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Input, Softmax, Concatenate
+
 from tensorflow.keras.models import clone_model, Model
 from tensorflow.keras.optimizers import Adam, RMSprop
 from tensorflow.keras import backend as K
@@ -32,7 +33,7 @@ class Agent(AgentInterface):
     def update_weights(self, state, action_index, reward, next_state, discount_factor, I):
         I = np.expand_dims(np.asarray(I), axis=0)
         target = reward + discount_factor * self.get_value(next_state)
-        td_error = self.get_value(state) - target
+        td_error = target - self.get_value(state)
 
         action_index = np.expand_dims(np.asarray(action_index), axis=0)
         state = np.expand_dims(np.asarray(state), axis=0)
@@ -42,13 +43,12 @@ class Agent(AgentInterface):
 
     def _build_and_compile_actor(self):
         i_f = Input(shape=(self.input_length,))
-        x_f = Dense(64, activation='relu')(i_f)
-        x_f = Dense(128, activation='relu')(x_f)
+        x_f = Dense(12, activation='relu')(i_f)
+        x_f = Dense(64, activation='relu')(x_f)
         o_f = Dense(self.output_length)(x_f)
         self.actor_forward = Model(inputs=i_f, outputs=o_f)
         i_b = Input(shape=(self.input_length,))
         o_b = self.actor_forward(i_b)
-        o_b = Softmax()(o_b)
         I = Input(shape=(1,))
         action_idx = Input(shape=(1,))
         o_b = Concatenate()([o_b, action_idx, I])
@@ -73,10 +73,11 @@ class Agent(AgentInterface):
 
 def actor_loss(td_error, y_pred):
     y, action_index, I = y_pred[:, : -2], tf.cast(y_pred[:, -2], dtype=tf.int32), y_pred[:, -1]
-    padding = tf.constant([[1, 0]])
-    action_index_pad = tf.pad(action_index, padding)
-    action_prob = tf.gather_nd(y, tf.expand_dims(action_index_pad, axis=0))
-    neg_log_prob = -K.log(action_prob)
+    # padding = tf.constant([[1, 0]])
+    # action_index_pad = tf.pad(action_index, padding)
+    # action_prob = tf.gather_nd(y, tf.expand_dims(action_index_pad, axis=0))
+    # neg_log_prob = -K.log(action_prob)
+    neg_log_prob = tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=tf.one_hot(action_index, depth=9))
     return I * neg_log_prob * td_error
 
 
