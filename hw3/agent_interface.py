@@ -15,3 +15,7 @@ class AgentInterface(ABC):
     @abstractmethod
     def get_actions(self, state):
         pass
+
+    @abstractmethod
+    def save_weights(self, path):
+        pass

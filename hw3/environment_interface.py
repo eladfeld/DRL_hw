@@ -7,9 +7,6 @@ class EnvironmentInterface(ABC):
     def __str__(self):
         return self.name
 
-    @abstractmethod
-    def get_action_state_size(self):
-        pass
 
     @abstractmethod
     def initialize_state(self):
