@@ -6,7 +6,7 @@ from tensorflow.keras.layers import Input, Concatenate, Lambda
 import os
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
-from hw3.nn import get_actor, get_critic
+from hw3.nn import  get_progressive_actor, get_progressive_critic
 from tensorflow.keras import backend as K
 
 class Agent(AgentInterface):
@@ -16,12 +16,13 @@ class Agent(AgentInterface):
         self.action_state_size = self.environment.get_action_state_size()
         self.actor_lr = args_dict['actor_learning_rate']
         self.critic_lr = args_dict['critic_learning_rate']
-        self.is_transfer = args_dict['do_transfer']
-        self.initial_weights_path = args_dict['initial_weights']
+        self.initial_weights_paths = args_dict['initial_weights']
         self.actor_forward = None
         self.actor_backward = None
         self.critic_forward = None
         self.critic_backward = None
+        self.input_shape = 6
+        self.output_shape = 3
         self._build_and_compile_actor()
         self._build_and_compile_critic()
         self.iteration = 0
@@ -47,16 +48,10 @@ class Agent(AgentInterface):
         actor_loss = self.actor_backward.train_on_batch(x=[state, action, I], y=td_error)
         critic_loss = self.critic_backward.train_on_batch(x=[state, I], y=td_error)
 
-
-        # if self.iteration % 2000 == 0:
-        #     self.actor_lr *= 0.7
-        #     K.set_value(self.actor_backward.optimizer.learning_rate, self.actor_lr)
         return actor_loss, critic_loss
 
     def _build_and_compile_actor(self):
-        self.actor_forward = get_actor()
-        if self.is_transfer:
-            self.load_and_freeze_actor()
+        self.actor_forward = get_progressive_actor(*self.initial_weights_paths)
         i_b = Input(shape=self.actor_forward.input_shape[1:])
         o_b = self.actor_forward(i_b)
         o_b = Lambda(lambda x: x[:, :self.action_state_size])(o_b)
@@ -69,9 +64,7 @@ class Agent(AgentInterface):
 
     def _build_and_compile_critic(self):
 
-        self.critic_forward = get_critic()
-        if self.is_transfer:
-            self.load_and_freeze_critic()
+        self.critic_forward = get_progressive_critic(*self.initial_weights_paths)
         i_b = Input(shape=self.critic_forward.input_shape[1:])
         o_b = self.critic_forward(i_b)
         I = Input(shape=(1,))
@@ -92,6 +85,9 @@ class Agent(AgentInterface):
         self.critic_forward.load_weights(os.path.join(self.initial_weights_path, 'critic.h5'))
         for layer in self.critic_forward.layers[:-1]:
             layer.trainable = False
+
+
+
 
 def get_actor_loss(depth):
     def actor_loss(td_error, y_pred):

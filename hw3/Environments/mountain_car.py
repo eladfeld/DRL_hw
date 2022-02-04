@@ -9,18 +9,32 @@ class Environment(EnvironmentInterface):
         self.current_state = None
         self.done = False
         self.input_size = 6
+        self.x_min = self.gym_env.observation_space.low[0]
+        self.x_max = self.gym_env.observation_space.high[0]
+        self.v_min = self.gym_env.observation_space.low[1]
+        self.v_max = self.gym_env.observation_space.high[1]
+        self.start_point = -np.pi/6
+        self.this_episode_rewards = []
+        self.total_rewards = []
+        self.found_the_goal_counter = 0
 
     def initialize_state(self):
         self.current_state = self.gym_env.reset()
         # self.current_state = np.append(self.current_state, (self.max_steps - self.step_num) / self.max_steps)
         self.done = False
+        if len(self.this_episode_rewards) != 0:
+            self.total_rewards.append(np.sum(self.this_episode_rewards))
 
     def get_state(self):
         if self.current_state is None:
             raise Exception('env is not initialized')
         else:
-            return np.pad(self.current_state, pad_width=(0, self.input_size - len(self.current_state)), mode='constant',
-                          constant_values=0)
+
+            # normalize and pad state
+            out_state = np.zeros(shape=(self.input_size,))
+            out_state[0] = ((self.current_state[0] + self.x_min) / (self.x_max - self.x_min)) * 2 - 1
+            out_state[4] = ((self.current_state[1] + self.v_min) / (self.v_max - self.v_min)) * 2 - 1
+            return out_state
 
 
     def is_valid_action(self, action):
@@ -35,7 +49,10 @@ class Environment(EnvironmentInterface):
         self.current_state = new_state
         self.done = done
         self.current_state = new_state
-        intrinsic_reward = abs(self.current_state[0] + np.pi/6) * 0.2 + abs(self.current_state[1]) * 20
+        if reward > 0:
+            self.found_the_goal_counter += 1
+        intrinsic_reward = (abs(self.current_state[1]) * 10 + max(self.current_state[0] - self.start_point, 0) * 0.1) /\
+                           (self.found_the_goal_counter * 0.25 + 1)
         return reward, intrinsic_reward
 
     def render(self):
@@ -43,3 +60,11 @@ class Environment(EnvironmentInterface):
 
     def is_done(self):
         return self.done
+
+    def is_converge(self):
+        if len(self.total_rewards) >= 50 and self.total_rewards[-50:] >= 90:
+            return True
+        return False
+
+    def use_intrinsic_rewards(self):
+        return True

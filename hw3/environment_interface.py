@@ -32,3 +32,11 @@ class EnvironmentInterface(ABC):
     @abstractmethod
     def is_done(self):
         raise NotImplementedError('is_done dose not implemented by environment: %s' % self.name)
+
+    @abstractmethod
+    def is_converge(self):
+        pass
+
+    @abstractmethod
+    def use_intrinsic_rewards(self):
+        pass

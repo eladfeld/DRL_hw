@@ -4,12 +4,12 @@ import numpy as np
 
 class Environment(EnvironmentInterface):
     def __init__(self, args):
-        super().__init__('acrobot')
-        self.gym_env = gym.make('Acrobot-v1')
+        super().__init__('cartpole')
+        self.gym_env = gym.make('CartPole-v1')
         self.current_state = None
         self.done = False
         self.input_size = 6
-        self.valid_actions = [-1, 0, 1]
+        self.valid_actions = [0, 1]
         self.episode_rewards = []
         self.total_rewards = []
 
@@ -55,7 +55,7 @@ class Environment(EnvironmentInterface):
         return len(self.valid_actions)
 
     def is_converge(self):
-        if len(self.total_rewards) >= 50 and np.mean(self.total_rewards[-50:]) >= -100:
+        if len(self.total_rewards) >= 100 and np.mean(self.total_rewards[-100:]) >= 475:
             return True
         return False
 
