@@ -84,12 +84,12 @@ class Agent(AgentInterface):
         self.critic_forward.save_weights(os.path.join(path, 'critic.h5'))
 
     def load_and_freeze_actor(self):
-        self.actor_forward.load_weights(os.path.join(self.initial_weights_path, 'actor.h5'))
+        self.actor_forward.load_weights(os.path.join(self.initial_weights_path[0], 'actor.h5'))
         for layer in self.actor_forward.layers[:-1]:
             layer.trainable = False
 
     def load_and_freeze_critic(self):
-        self.critic_forward.load_weights(os.path.join(self.initial_weights_path, 'critic.h5'))
+        self.critic_forward.load_weights(os.path.join(self.initial_weights_path[0], 'critic.h5'))
         for layer in self.critic_forward.layers[:-1]:
             layer.trainable = False
 

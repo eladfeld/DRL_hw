@@ -51,8 +51,10 @@ class Environment(EnvironmentInterface):
         self.current_state = new_state
         if reward > 0:
             self.found_the_goal_counter += 1
-        intrinsic_reward = (abs(self.current_state[1]) * 10 + max(self.current_state[0] - self.start_point, 0) * 0.1) /\
-                           (self.found_the_goal_counter * 0.25 + 1)
+        # intrinsic_reward = (abs(self.current_state[1]) * 5 + max(self.current_state[0] - self.start_point, 0)) /\
+        #                    (self.found_the_goal_counter * 0.5 + 1)
+        intrinsic_reward = (max(self.current_state[0] - self.start_point, 0) * 3) /\
+                           (self.found_the_goal_counter * 0.5 + 1)
         return reward, intrinsic_reward
 
     def render(self):

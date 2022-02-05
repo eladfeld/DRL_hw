@@ -5,13 +5,6 @@ input_length = 6
 output_length = 3
 
 
-# def get_actor() -> Model:
-#     i = Input(shape=(input_length,))
-#     o = Dense(256, activation='relu')(i)
-#     o = Dense(64, activation='relu')(o)
-#     o = Dense(output_length)(o)
-#     o = LeakyReLU(alpha=0.1)(o)
-#     return Model(inputs=i, outputs=o)
 def get_actor() -> Model:
     i = Input(shape=(input_length,))
     o = Dense(36, activation='relu')(i)
@@ -27,7 +20,7 @@ def get_critic() -> Model:
     return Model(inputs=i, outputs=o)
 
 
-def get_progressive_actor(weight_path1, weight_path2):
+def get_progressive_actor(weight_path1: str, weight_path2: str) -> Model:
     source_1 = get_actor()
     source_1.load_weights(os.path.join(weight_path1, 'actor.h5'))
     source_2 = get_actor()
@@ -86,7 +79,7 @@ def get_progressive_actor(weight_path1, weight_path2):
     return model
 
 
-def get_progressive_critic(weight_path1, weight_path2):
+def get_progressive_critic(weight_path1: str, weight_path2: str) -> Model:
     source_1 = get_critic()
     source_1.load_weights(os.path.join(weight_path1, 'critic.h5'))
     source_2 = get_critic()

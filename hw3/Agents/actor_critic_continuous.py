@@ -24,7 +24,7 @@ class Agent(AgentInterface):
         self._build_and_compile_critic()
 
     def get_actions(self, state):
-        full_action_space = softmax(np.squeeze(self.actor_forward.predict(np.expand_dims(np.asarray(state), axis=0))))[:-1]\
+        full_action_space = softmax(np.squeeze(self.actor_forward.predict(np.expand_dims(np.asarray(state), axis=0)))[:-1] * 5)\
                             * 10
         alpha = full_action_space[0]
         beta = full_action_space[1]
@@ -52,7 +52,7 @@ class Agent(AgentInterface):
             self.load_and_freeze_actor()
         i_b = Input(shape=self.actor_forward.input_shape[1:])
         o_b = self.actor_forward(i_b)
-        o_b = Lambda(lambda x: x[:, :-1])(o_b)
+        o_b = Lambda(lambda x: x[:, :-1] * 5)(o_b)
         o_b = Softmax()(o_b)
         o_b = Lambda(lambda x: x * 10)(o_b)
         I = Input(shape=(1,))
