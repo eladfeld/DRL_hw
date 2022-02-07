@@ -25,8 +25,8 @@ class Agent(AgentInterface):
     def get_actions(self, state):
         full_action_space = softmax(np.squeeze(self.actor_forward.predict(np.expand_dims(np.asarray(state), axis=0)))[:-1])\
                             * 10
-        alpha = full_action_space[0]
-        beta = full_action_space[1]
+        beta = full_action_space[0]
+        alpha = full_action_space[1]
         action = np.random.beta(alpha, beta)
         return action
 

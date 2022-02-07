@@ -13,9 +13,9 @@ def parse_args():
                         help='environment name from Environment directory')
     parser.add_argument('--a', dest='agent', type=str, required=True,
                         help='agent name from Agent directory')
-    parser.add_argument('--episodes', dest='episodes', type=int, default=5000,
+    parser.add_argument('--episodes', dest='episodes', type=int, default=2000,
                         help='optional, max episodes for q_learning')
-    parser.add_argument('--steps', dest='steps', type=int, default=5000,
+    parser.add_argument('--steps', dest='steps', type=int, default=1000,
                         help='optional, max steps to run with q_learning per episode')
     parser.add_argument('--discount_factor', dest='discount_factor', type=float, default=0.99,
                             help = 'optional, discount factor for q learning algorithm')
@@ -94,6 +94,7 @@ def main():
                   % (episode, ep_external_reward, ep_intrinsic_reward, ep_actor_loss, ep_critic_loss))
         if environment.is_converge():
             break
+        agent.save_weights(out_path)
     run_time = time.time() - start_time
     print('run time: %d hours, %d minutes, % 1.2f seconds' % (int(run_time//3600), int(run_time//60) % 60,
                                                              run_time - int(run_time//60) * 60))

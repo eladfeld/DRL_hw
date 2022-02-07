@@ -1,20 +1,22 @@
 from hw3.agent_interface import AgentInterface
 import numpy as np
 from scipy.special import softmax
+import tensorflow_probability as tfp
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Concatenate, Lambda, Softmax
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
-from hw3.nn import get_actor, get_critic
+from hw3.nn import get_progressive_actor, get_progressive_critic
 import os
 import tensorflow.keras.backend as K
+
+
 class Agent(AgentInterface):
     def __init__(self, environment, args_dict):
         super().__init__(environment, 'actor_critic_continuous')
         self.environment = environment
         self.actor_lr = args_dict['actor_learning_rate']
         self.critic_lr = args_dict['critic_learning_rate']
-        self.is_transfer = args_dict['do_transfer']
         self.initial_weights_path = args_dict['initial_weights']
         self.actor_forward = None
         self.actor_backward = None
@@ -22,14 +24,15 @@ class Agent(AgentInterface):
         self.critic_backward = None
         self._build_and_compile_actor()
         self._build_and_compile_critic()
+        self.actor_optimizer = Adam(self.actor_lr)
+        self.critic_optimizer = Adam(self.critic_lr)
 
     def get_actions(self, state):
-        epsilon = 1e-4
-        full_action_space = softmax(np.squeeze(self.actor_forward.predict(np.expand_dims(np.asarray(state), axis=0)))[:-1] * 3)\
-                            * 10
-        alpha = full_action_space[0] + epsilon
-        beta = full_action_space[1] + epsilon
-        action = np.random.beta(alpha, beta)
+        full_action_space = np.squeeze(self.actor_forward.predict(np.expand_dims(np.asarray(state), axis=0)))\
+
+        mu = full_action_space[0]
+        sigma = np.log(np.exp(full_action_space[1]) + 1)
+        action = np.random.normal(mu, sigma)
         return action
 
     def get_value(self, state):
@@ -42,42 +45,49 @@ class Agent(AgentInterface):
         td_error = target - self.get_value(state)
         action = np.expand_dims(np.asarray(action), axis=0)
         state = np.expand_dims(np.asarray(state), axis=0)
-        actor_loss = self.actor_backward.train_on_batch(x=[state, action, I], y=td_error)
-        critic_loss = self.critic_backward.train_on_batch(x=[state, I], y=td_error)
-        if self.environment.is_done() and self.environment.is_decay():
-            self.actor_lr *= 0.1
-            self.critic_lr *= 0.1
-            K.set_value(self.actor_backward.optimizer.learning_rate, self.actor_lr)
-            K.set_value(self.critic_backward.optimizer.learning_rate, self.critic_lr)
+        actor_loss = self._train_actor(I, action, state, td_error)
+        critic_loss = self._train_critic(I, state, td_error)
+        if self.environment.is_done():
+            self.actor_lr *= 0.95
+            K.set_value(self.actor_optimizer.learning_rate, self.actor_lr)
+
         return actor_loss, critic_loss
 
+    def _train_actor(self, I, action, state, td_error):
+        with tf.GradientTape() as tape:
+            logits = self.actor_backward([state, action, I], training=True)
+            loss_value = self.actor_loss(td_error, logits)
+            grads = tape.gradient(loss_value, self.actor_backward.trainable_weights)
+            self.actor_optimizer.apply_gradients(zip(grads, self.actor_backward.trainable_weights))
+        return float(loss_value)
+
+
+    def _train_critic(self, I, state, td_error):
+        with tf.GradientTape() as tape:
+            logits = self.critic_backward([state, I], training=True)
+            loss_value = self.critic_loss(td_error, logits)
+            grads = tape.gradient(loss_value, self.critic_backward.trainable_weights)
+            self.actor_optimizer.apply_gradients(zip(grads, self.critic_backward.trainable_weights))
+        return float(loss_value)
+
     def _build_and_compile_actor(self):
-        self.actor_forward = get_actor()
-        if self.is_transfer:
-            self.load_and_freeze_actor()
+        self.actor_forward = get_progressive_actor(*self.initial_weights_path)
         i_b = Input(shape=self.actor_forward.input_shape[1:])
         o_b = self.actor_forward(i_b)
-        o_b = Lambda(lambda x: x[:, :-1] * 3)(o_b)
-        o_b = Softmax()(o_b)
-        o_b = Lambda(lambda x: x * 10)(o_b)
         I = Input(shape=(1,))
         action = Input(shape=(1,))
         o_b = Concatenate()([o_b, action, I])
         self.actor_backward = Model(inputs=[i_b, action, I], outputs=o_b)
-        self.actor_backward.compile(Adam(self.actor_lr, clipnorm=.1), loss=actor_loss)
 
 
     def _build_and_compile_critic(self):
 
-        self.critic_forward = get_critic()
-        if self.is_transfer:
-            self.load_and_freeze_critic()
+        self.critic_forward = get_progressive_critic(*self.initial_weights_path)
         i_b = Input(shape=self.critic_forward.input_shape[1:])
         o_b = self.critic_forward(i_b)
         I = Input(shape=(1,))
         o_b = Concatenate()([o_b, I])
         self.critic_backward = Model(inputs=[i_b, I], outputs=o_b)
-        self.critic_backward.compile(Adam(self.critic_lr), loss=critic_loss)
 
     def save_weights(self, path):
         self.actor_forward.save_weights(os.path.join(path, 'actor.h5'))
@@ -93,21 +103,17 @@ class Agent(AgentInterface):
         for layer in self.critic_forward.layers[:-1]:
             layer.trainable = False
 
+    def actor_loss(self, td_error, y_pred):
+        mu, sigma, action, I = y_pred[:, 0], y_pred[:, 1], y_pred[:, -2], y_pred[:, -1]
+        dist = tfp.distributions.Normal(mu, tf.nn.softplus(sigma))
+        neg_log_prob = -dist.log_prob(action)
+        return I * neg_log_prob * td_error
 
-def actor_loss(td_error, y_pred):
-    def get_log_prob(alpha, beta, x):
-        return tf.math.lgamma(alpha + beta) - tf.math.lgamma(alpha) - tf.math.lgamma(beta) + \
-                (alpha - 1) * tf.math.log(x) + (beta - 1) * tf.math.log(1 - x)
+    def critic_loss(self, td_error, y_pred):
+        y, I = y_pred[:, 0], y_pred[:, 1]
+        return -I * y * td_error
 
 
-    alpha, beta, action, I = y_pred[:, 0], y_pred[:, 1], y_pred[:, -2], y_pred[:, -1]
-    neg_log_prob = get_log_prob(alpha, beta, alpha / (alpha + beta)) - get_log_prob(alpha, beta, action)
-    return I * neg_log_prob * td_error
-
-
-def critic_loss(td_error, y_pred):
-    y, I = y_pred[:, 0], y_pred[:, 1]
-    return -I * y * td_error
 
 
 
