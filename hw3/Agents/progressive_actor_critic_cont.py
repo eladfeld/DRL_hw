@@ -30,7 +30,7 @@ class Agent(AgentInterface):
     def get_actions(self, state):
         full_action_space = np.squeeze(self.actor_forward.predict(np.expand_dims(np.asarray(state), axis=0)))\
 
-        mu = full_action_space[0]
+        mu = np.tanh(full_action_space[0])
         sigma = np.log(np.exp(full_action_space[1]) + 1)
         action = np.random.normal(mu, sigma)
         return action
@@ -105,7 +105,7 @@ class Agent(AgentInterface):
 
     def actor_loss(self, td_error, y_pred):
         mu, sigma, action, I = y_pred[:, 0], y_pred[:, 1], y_pred[:, -2], y_pred[:, -1]
-        dist = tfp.distributions.Normal(mu, tf.nn.softplus(sigma))
+        dist = tfp.distributions.Normal(tf.nn.tanh(mu), tf.nn.softplus(sigma))
         neg_log_prob = -dist.log_prob(action)
         return I * neg_log_prob * td_error
 

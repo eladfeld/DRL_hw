@@ -56,7 +56,9 @@ class Environment(EnvironmentInterface):
         #     intrinsic_reward = (self.max_step - self.curr_step) * 0.2
         # else:
         #     intrinsic_reward = min(abs(self.current_state[0] - self.start_point) * 0.5 + abs(self.current_state[1]) * 4, 0.2)
-        intrinsic_reward = -reward if self.current_state[0] > 0.25 and reward < 0 else 0
+        # intrinsic_reward = 0.1 if self.current_state[0] > 0.2 else 0
+        # intrinsic_reward += min(abs(self.current_state[1]) * 4, 0.1)
+        intrinsic_reward = 0
         return reward, intrinsic_reward
 
     def render(self):
