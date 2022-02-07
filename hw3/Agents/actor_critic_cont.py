@@ -4,6 +4,7 @@ from scipy.special import softmax
 import tensorflow_probability as tfp
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Concatenate, Lambda, Softmax
+from tensorflow.keras.initializers import GlorotNormal
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from hw3.nn import get_actor, get_critic
@@ -99,14 +100,18 @@ class Agent(AgentInterface):
         self.critic_forward.save_weights(os.path.join(path, 'critic.h5'))
 
     def load_and_freeze_actor(self):
-        self.actor_forward.load_weights(os.path.join(self.initial_weights_path, 'actor.h5'))
-        for layer in self.actor_forward.layers[:-1]:
-            layer.trainable = False
+        self.actor_forward.load_weights(os.path.join(self.initial_weights_path[0], 'actor.h5'))
+        for i in range(len(self.actor_forward.layers[:-1])):
+            self.actor_forward.layers[i].trainable = False
+        self.actor_forward.layers[-1].set_weights([GlorotNormal()(shape=w.shape) for w in
+                                                    self.actor_forward.layers[-1].get_weights()])
 
     def load_and_freeze_critic(self):
-        self.critic_forward.load_weights(os.path.join(self.initial_weights_path, 'critic.h5'))
-        for layer in self.critic_forward.layers[:-1]:
-            layer.trainable = False
+        self.critic_forward.load_weights(os.path.join(self.initial_weights_path[0], 'critic.h5'))
+        for i in range(len(self.critic_forward.layers[:-1])):
+            self.critic_forward.layers[i].trainable = False
+        self.critic_forward.layers[-1].set_weights([GlorotNormal()(shape=w.shape) for w in
+                                                    self.critic_forward.layers[-1].get_weights()])
 
     def actor_loss(self, td_error, y_pred):
         mu, sigma, action, I = y_pred[:, 0], y_pred[:, 1], y_pred[:, -2], y_pred[:, -1]

@@ -55,7 +55,7 @@ class Environment(EnvironmentInterface):
         return len(self.valid_actions)
 
     def is_converge(self):
-        if len(self.total_rewards) >= 50 and np.mean(self.total_rewards[-50:]) >= -100:
+        if len(self.total_rewards) >= 50 and np.mean(self.total_rewards[-50:]) >= -95:
             return True
         return False
 

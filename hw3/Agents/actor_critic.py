@@ -7,6 +7,7 @@ import os
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from hw3.nn import get_actor, get_critic
+from tensorflow.keras.initializers import GlorotNormal
 from tensorflow.keras import backend as K
 
 class Agent(AgentInterface):
@@ -87,11 +88,15 @@ class Agent(AgentInterface):
         self.actor_forward.load_weights(os.path.join(self.initial_weights_path[0], 'actor.h5'))
         for i in range(len(self.actor_forward.layers[:-1])):
             self.actor_forward.layers[i].trainable = False
+        self.actor_forward.layers[-1].set_weights([GlorotNormal()(shape=w.shape) for w in
+                                                    self.actor_forward.layers[-1].get_weights()])
 
     def load_and_freeze_critic(self):
         self.critic_forward.load_weights(os.path.join(self.initial_weights_path[0], 'critic.h5'))
         for i in range(len(self.critic_forward.layers[:-1])):
             self.critic_forward.layers[i].trainable = False
+        self.critic_forward.layers[-1].set_weights([GlorotNormal()(shape=w.shape) for w in
+                                                    self.critic_forward.layers[-1].get_weights()])
 
 def get_actor_loss(depth):
     def actor_loss(td_error, y_pred):

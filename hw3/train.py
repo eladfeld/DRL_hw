@@ -14,11 +14,11 @@ def parse_args():
     parser.add_argument('--a', dest='agent', type=str, required=True,
                         help='agent name from Agent directory')
     parser.add_argument('--episodes', dest='episodes', type=int, default=2000,
-                        help='optional, max episodes for q_learning')
+                        help='optional, max episodes ')
     parser.add_argument('--steps', dest='steps', type=int, default=1000,
-                        help='optional, max steps to run with q_learning per episode')
+                        help='optional, max steps  per episode')
     parser.add_argument('--discount_factor', dest='discount_factor', type=float, default=0.99,
-                            help = 'optional, discount factor for q learning algorithm')
+                            help = 'optional, discount factor')
     parser.add_argument('--a-lr', dest='actor_learning_rate', type=float, default=4e-4,
                          help='actor learning rate')
     parser.add_argument('--c-lr', dest='critic_learning_rate', type=float, default=2e-3,
@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument('--w', dest='initial_weights', type=str, nargs='+', default='',
                         help='path to initial weights')
     parser.add_argument('--render', dest='render', action='store_true', default=False,
-                         help='use transfer learning')
+                         help='render environment')
 
 
     return parser.parse_args()
